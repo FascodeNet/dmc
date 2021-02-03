@@ -12,13 +12,20 @@
 # https://github.com/MakeNowJust/sushi-ware
 #
 
-set -e
+declare -A GREETER_CONFIG=(
+    ["lightdm-webkit2-greeter"]="/etc/lightdm/lightdm-webkit2-greeter.conf"
+    ["lightdm-slick-greeter"]="/etc/lightdm/slick-greeter.conf"
+    ["lightdm-gtk-greeter"]="/etc/lightdm/lightdm-gtk-greeter.conf"
+    ["io.elementary.greeter"]="/etc/lightdm/io.elementary.greeter.conf"
+    ["lightdm-mini-greeter"]="/etc/lightdm/lightdm-mini-greeter.conf"
+)
 
 USE_EDITOR="vi"
 COMMAND="null"
 LIGHTDM_CONFIG="/etc/lightdm/lightdm.conf.d/00-lightdm-config-command.conf"
 COMMENT_REPLACE=false
 GREETERS=($(ls "/usr/share/xgreeters" | sed "s|.desktop$||g"))
+CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" | cut -d "=" -f 2)"
 
 script_usage(){
     echo "usage lightdm-greeter [options] [command]"
@@ -27,7 +34,7 @@ script_usage(){
     echo
     echo " General command:"
     echo "    greeter-change [greeter]     Specify the greeter to use"
-    #echo "    greeter-edit [greeter]       Edit the greeter configs"
+    echo "    greeter-edit [greeter]       Edit the greeter configs"
     echo "    greeter-list                 Shows a list of currently installed Greeters"
     echo "    remove                       Removes all changes made by this command"
     echo
@@ -37,6 +44,8 @@ script_usage(){
     echo "    --comment-replace"
 }
 
+set -e
+
 # エディタを設定
 if [[ -v EDITOR ]]; then
     USE_EDITOR="${EDITOR}"
@@ -45,6 +54,11 @@ fi
 
 # エラー
 msg_error() {
+    echo "${@}" 1>&2
+}
+
+# 警告
+msg_warn() {
     echo "${@}" 1>&2
 }
 
@@ -100,11 +114,10 @@ run_greeter_change() {
 
 # greeter-listコマンド
 run_greeter_list() {
-    local _current_greeter="$(lightdm --show-config 2>&1 | grep "greeter-session" | cut -d "=" -f 2)"
     echo "Available Lightdm greeter list:"
     local _greeter
     for _greeter in ${GREETERS[@]}; do
-        if [[ "${_greeter}" = "${_current_greeter}" ]]; then
+        if [[ "${_greeter}" = "${CURRENT_GREETER}" ]]; then
             echo " * ${_greeter}"
         else
             echo "   ${_greeter}"
@@ -123,6 +136,26 @@ run_remove(){
         if [[ "${_yes_or_no}" = "y" ]]; then
             mv "${LIGHTDM_CONFIG}" "${LIGHTDM_CONFIG}.disabled"
         fi
+    fi
+}
+
+# greeter-edit
+run_greeter_edit(){
+    local _greeter
+    if [[ -z "${1}" ]]; then
+        msg_warn "Greeter was not specified. Open the currently configured Greeter configuration file."
+        _greeter="${CURRENT_GREETER}"
+    else
+        _greeter="${1}"
+    fi
+    if [[ -z "${GREETER_CONFIG["${_greeter}"]}" ]]; then
+        msg_error "This Greeter is not currently supported."
+        msg_error "Please report the problem here."
+        msg_error "https://github.com/FascodeNet/lightdm-config/issues"
+        exit 1
+    else
+        bash -c "${USE_EDITOR} ${GREETER_CONFIG["${_greeter}"]}"
+        exit
     fi
 }
 
