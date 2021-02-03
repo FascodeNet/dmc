@@ -26,6 +26,7 @@ LIGHTDM_CONFIG="/etc/lightdm/lightdm.conf.d/00-lightdm-config-command.conf"
 COMMENT_REPLACE=false
 GREETERS=($(ls "/usr/share/xgreeters" | sed "s|.desktop$||g"))
 CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" | cut -d "=" -f 2)"
+LOADED_LIGHTDM_CONFIG=($(printf "%s\n" $(_line="$(lightdm --show-config 2>&1 | wc -l)"; lightdm --show-config 2>&1 | grep -x  -A "${_line}" "Sources:" | grep -v "Sources") | sed -E "s|^[A-Z]$||g"))
 
 script_usage(){
     echo "usage lightdm-greeter [options] [command]"
@@ -37,6 +38,7 @@ script_usage(){
     echo "    greeter-edit [greeter]       Edit the greeter configs"
     echo "    greeter-list                 Shows a list of currently installed Greeters"
     echo "    remove                       Removes all changes made by this command"
+    echo "    edit                         Edit lightdm config"
     echo
     echo " General option:"
     echo "    -e | --editer                Specifies the editor to use for editing"
@@ -159,6 +161,18 @@ run_greeter_edit(){
     fi
 }
 
+# edit
+run_edit(){
+    for _config in "${LOADED_LIGHTDM_CONFIG[@]}"; do
+        echo -ne "Edit ${_config} ? (y or n)> "
+        read -n 1 _yes_or_no
+        echo
+        if [[ "${_yes_or_no}" = "y" ]]; then
+            bash -c "${USE_EDITOR} ${_config}"
+        fi
+    done
+}
+
 # 引数を解析
 ARGUMENT="${@}"
 OPTS="eh"
@@ -203,6 +217,9 @@ case "${COMMAND}" in
         ;;
     "remove")
         run_remove
+        ;;
+    "edit")
+        run_edit
         ;;
     "null")
         script_usage
