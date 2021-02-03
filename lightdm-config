@@ -211,6 +211,11 @@ run_auto_login(){
         local autologin_session
         local autologin_user="${1}"
 
+        if ! getent passwd "${autologin_user}" 1> /dev/null 2>&1; then
+            echo "${autologin_user} is a non-existent user."
+            exit 1
+        fi
+
         if (( $(ls "/usr/share/xsessions" 2> /dev/null | wc -l) <= 1 )); then
             autologin_session="$(ls "/usr/share/xsessions" | sed 's|.desktop$||g')"
         else
