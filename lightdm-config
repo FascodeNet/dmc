@@ -176,7 +176,7 @@ run_edit(){
 # 引数を解析
 ARGUMENT="${@}"
 OPTS="eh"
-OPTL="edit:,help,comment-replace"
+OPTL="editor:,help,comment-replace"
 OPT="$(getopt -o ${OPTS} -l ${OPTL} -- ${ARGUMENT})"
 (( ${?} != 0 )) && exit 1
 
