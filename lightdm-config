@@ -1,0 +1,181 @@
+#!/usr/bin/env bash
+#
+# Yamada Hayao
+# Twitter: @Hayao0819
+# Email  : hayao@fascode.net
+#
+# (c) 2019-2021 Fascode Network.
+#
+# lightdm-config - A simple tool for editing LightDM
+#
+# LICENSE: THE SUSHI-WARE LICENSE
+# https://github.com/MakeNowJust/sushi-ware
+#
+
+set -e
+
+USE_EDITOR="vi"
+COMMAND="null"
+LIGHTDM_CONFIG="/etc/lightdm/lightdm.conf.d/00-lightdm-config-command.conf"
+COMMENT_REPLACE=false
+GREETERS=($(ls "/usr/share/xgreeters" | sed "s|.desktop$||g"))
+
+script_usage(){
+    echo "usage lightdm-greeter [options] [command]"
+    echo
+    echo "A simple tool for switching LightDM Greeters"
+    echo
+    echo " General command:"
+    echo "    greeter-change [greeter]     Specify the greeter to use"
+    #echo "    greeter-edit [greeter]       Edit the greeter configs"
+    echo "    greeter-list                 Shows a list of currently installed Greeters"
+    echo "    remove                       Removes all changes made by this command"
+    echo
+    echo " General option:"
+    echo "    -e | --editer                Specifies the editor to use for editing"
+    echo "    -h | --help                  This help message and exit"
+    echo "    --comment-replace"
+}
+
+# エディタを設定
+if [[ -v EDITOR ]]; then
+    USE_EDITOR="${EDITOR}"
+fi
+
+
+# エラー
+msg_error() {
+    echo "${@}" 1>&2
+}
+
+# 設定ファイルに書き込む
+write_config(){
+    echo "${@}" >> "${LIGHTDM_CONFIG}"
+}
+
+# 設定ファイルの値を変更する
+set_config(){
+    local key="${1}" value="${2}"
+    if [[ "${COMMENT_REPLACE}" = true ]]; then
+        if cat "${LIGHTDM_CONFIG}" | grep -E "^#? ?${key} ?=" > /dev/null; then
+            sed -i -r "s|^# ?${key} ?=.+|${key}=${value}|g" "${LIGHTDM_CONFIG}" "${LIGHTDM_CONFIG}"
+        fi
+    fi
+
+    if cat "${LIGHTDM_CONFIG}" | grep -E "^ ?${key} ?=" > /dev/null; then
+        sed -i -r "s|^ ?${key} ?=.+|${key}=${value}|g" "${LIGHTDM_CONFIG}" "${LIGHTDM_CONFIG}"
+        return 0
+    fi
+
+    # 新しく設定を追記する
+    write_config "${1}=${2}"
+}
+
+# 設定ファイルを作成
+init_configs(){
+    if [[ ! -f "${LIGHTDM_CONFIG}" ]]; then
+        mkdir -p "$(dirname "${LIGHTDM_CONFIG}")"
+        touch "${LIGHTDM_CONFIG}"
+        echo "[Seat:*]" > "${LIGHTDM_CONFIG}"
+    fi
+}
+
+# greeter-changeコマンド
+run_greeter_change() {
+    # 引数チェック
+    if [[ -z "${1}" ]]; then
+        msg_error "Please specify Greeter."
+        script_usage
+        exit 1
+    fi
+
+    # 指定されたGreeterが正しいか確認
+    if ! printf "%s\n" "${GREETERS[@]}" | grep -x "${1}" > /dev/null 2>&2; then
+        msg_error "The greeter (${1}) doesn't exist."
+        exit 1
+    else
+        set_config "greeter-session" "${1}"
+    fi
+}
+
+# greeter-listコマンド
+run_greeter_list() {
+    local _current_greeter="$(lightdm --show-config 2>&1 | grep "greeter-session" | cut -d "=" -f 2)"
+    echo "Available Lightdm greeter list:"
+    local _greeter
+    for _greeter in ${GREETERS[@]}; do
+        if [[ "${_greeter}" = "${_current_greeter}" ]]; then
+            echo " * ${_greeter}"
+        else
+            echo "   ${_greeter}"
+        fi
+    done
+}
+
+# removeコマンド
+run_remove(){
+    if [[ ! -f "${LIGHTDM_CONFIG}" ]]; then
+        return 0
+    else
+        local _yes_or_no
+        echo -ne "Are you sure you want to delete all settings?\nThis change is irreversible.\n (y or n) > "
+        read -n 1 _yes_or_no
+        if [[ "${_yes_or_no}" = "y" ]]; then
+            mv "${LIGHTDM_CONFIG}" "${LIGHTDM_CONFIG}.disabled"
+        fi
+    fi
+}
+
+# 引数を解析
+ARGUMENT="${@}"
+OPTS="eh"
+OPTL="edit:,help,comment-replace"
+OPT="$(getopt -o ${OPTS} -l ${OPTL} -- ${ARGUMENT})"
+(( ${?} != 0 )) && exit 1
+
+eval set -- "${OPT}"
+unset OPT OPTS OPTL
+
+while true; do
+    case "${1}" in
+        -e | --editor)
+            USE_EDITOR="${2}"
+            shift 2
+            ;;
+        -h | --help)
+            script_usage
+            exit 0
+            ;;
+        --comment-replace)
+            COMMENT_REPLACE=true
+            shift 1
+            ;;
+        --)
+            shift 1
+            break
+            ;;
+    esac
+done
+
+COMMAND="${1}"
+shift 1
+
+case "${COMMAND}" in
+    "greeter-change")
+        init_configs
+        run_greeter_change "${1}"
+        ;;
+    "greeter-list")
+        run_greeter_list
+        ;;
+    "remove")
+        run_remove
+        ;;
+    "null")
+        script_usage
+        exit 1
+        ;;
+    *)
+        msg_error "Undefined commnad"
+        ;;
+esac
