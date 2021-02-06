@@ -254,6 +254,10 @@ run_remove(){
 
 # greeter-edit
 run_greeter_edit(){
+    if [[ "${NON_INTERACTIVE}" = true ]]; then
+        msg_error "You cannot use this command in non-interactive mode."
+        exit 1
+    fi
     local _greeter
     if [[ -z "${1}" ]]; then
         msg_warn "Greeter was not specified. Open the currently configured Greeter configuration file."
@@ -277,6 +281,10 @@ run_greeter_edit(){
 
 # edit
 run_edit(){
+    if [[ "${NON_INTERACTIVE}" = true ]]; then
+        msg_error "You cannot use this command in non-interactive mode."
+        exit 1
+    fi
     for _config in "${LOADED_LIGHTDM_CONFIG[@]}"; do
         echo -ne "Edit ${_config} ? (y or n)> "
         read -n 1 _yes_or_no
