@@ -35,6 +35,7 @@ script_usage(){
     echo
     echo " General command:"
     echo "    autologin [username]           Set up automatic login (with blank username to disable)"
+    echo "    greeter                        Run greeter setup wizard"
     echo "    greeter-change [greeter]       Specify the greeter to use"
     echo "    greeter-edit [greeter]         Edit the greeter configs"
     echo "    greeter-list                   Shows a list of currently installed Greeters"
@@ -147,6 +148,32 @@ run_greeter_list() {
             echo "   ${_greeter}"
         fi
     done
+}
+
+# greeterコマンド
+run_greeter_wizard(){
+    local _c _greeter
+    echo "Please select the greeter to use."
+    for (( _c=1; _c<=${#GREETERS[@]}; _c++)); do
+        _greeter="${GREETERS[$(( _c - 1 ))]}"
+        if [[ "${_greeter}" = "${CURRENT_GREETER}" ]]; then
+            echo " * ${_c}: ${_greeter}"
+        else
+            echo "   ${_c}: ${_greeter}"
+        fi
+        unset _greeter
+    done
+    echo -n "(0 ~ ${#GREETERS[@]}) > "
+    read -n 1 _input
+    echo
+    _greeter="${GREETERS[$(( _input - 1 ))]}"
+    if [[ -n "${_greeter}" ]]; then
+        run_greeter_change "${_greeter}"
+    else
+        run_greeter_wizard
+        exit 0
+    fi
+    echo "Changed greeter to ${_greeter}"
 }
 
 # removeコマンド
@@ -287,6 +314,10 @@ case "${COMMAND}" in
     "autologin")
         init_configs
         run_auto_login "${1}"
+        ;;
+    "greeter")
+        init_configs
+        run_greeter_wizard
         ;;
     "greeter-change")
         init_configs
