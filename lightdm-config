@@ -26,7 +26,15 @@ LIGHTDM_CONFIG="/etc/lightdm/lightdm.conf.d/00-lightdm-config-command.conf"
 COMMENT_REPLACE=false
 GREETERS=($(ls "/usr/share/xgreeters" | sed "s|.desktop$||g"))
 CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" | cut -d "=" -f 2)"
-LOADED_LIGHTDM_CONFIG=($(printf "%s\n" $(_line="$(lightdm --show-config 2>&1 | wc -l)"; lightdm --show-config 2>&1 | grep -x  -A "${_line}" "Sources:" | grep -v "Sources") | sed -E "s|^[A-Z]$||g"))
+LOADED_LIGHTDM_CONFIG=(
+    $(
+        printf "%s\n" $(
+        lightdm --show-config 2>&1 | \
+            grep -x -A "$(lightdm --show-config 2>&1 | wc -l)" "Sources:" | \
+            grep -v "Sources") | \
+            sed -E "s|^[A-Z]$||g"
+    )
+)
 
 script_usage(){
     echo "usage lightdm-greeter [options] [command]"
@@ -72,6 +80,19 @@ write_config(){
     echo "${@}" >> "${LIGHTDM_CONFIG}"
 }
 
+# キーが設定されている設定ファイル
+get_source_file(){
+    local key="${1}"
+    local source_name="$(lightdm --show-config 2>&1 | grep -E "^[A-Z]  ${key}=" | cut -d ' ' -f 1)"
+    local source_path="$(lightdm --show-config 2>&1 | grep -x -A "$(lightdm --show-config 2>&1 | wc -l)" "Sources:" | grep -xv "Sources" | grep -E "^${source_name}  " | sed "s|^${source_name}  ||g")"
+    if [[ -n "${source_path}" ]]; then
+        echo -n "${source_path}"
+    else
+        echo -n ""
+    fi
+}
+
+
 # 設定ファイルの値を変更する
 set_config(){
     local key="${1}" value="${2}"
@@ -83,11 +104,15 @@ set_config(){
 
     if cat "${LIGHTDM_CONFIG}" | grep -E "^ ?${key} ?=" > /dev/null; then
         sed -i -r "s|^ ?${key} ?=.+|${key}=${value}|g" "${LIGHTDM_CONFIG}"
-        return 0
+    else
+        # 新しく設定を追記する
+        write_config "${1}=${2}"
     fi
 
-    # 新しく設定を追記する
-    write_config "${1}=${2}"
+    if [[ ! "$(get_value "${1}")" = "${2}" ]]; then
+        msg_error "Failed to change the setting value. A value has already been set for $(get_source_file "${1}")"
+        msg_error "lightdm-config does not manipulate other configuration files for safety. Comment out the settings in that file."
+    fi
 }
 
 # 設定ファイルのキーを削除する
