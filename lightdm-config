@@ -24,6 +24,7 @@ USE_EDITOR="vi"
 COMMAND="null"
 LIGHTDM_CONFIG="/etc/lightdm/lightdm.conf.d/00-lightdm-config-command.conf"
 COMMENT_REPLACE=false
+NON_INTERACTIVE=false
 GREETERS=($(ls "/usr/share/xgreeters" | sed "s|.desktop$||g"))
 CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" | cut -d "=" -f 2)"
 LOADED_LIGHTDM_CONFIG=(
@@ -42,19 +43,20 @@ script_usage(){
     echo "A simple tool for switching LightDM Greeters"
     echo
     echo " General command:"
-    echo "    autologin [username]           Set up automatic login (with blank username to disable)"
-    echo "    greeter                        Run greeter setup wizard"
-    echo "    greeter-create [file]          Set the specified executable file as Greeter"
-    echo "    greeter-change [greeter]       Specify the greeter to use"
-    echo "    greeter-edit [greeter]         Edit the greeter configs"
-    echo "    greeter-list                   Shows a list of currently installed Greeters"
-    echo "    remove                         Removes all changes made by this command"
-    echo "    edit                           Edit lightdm config"
+    echo "    autologin [username] [session]    Set up automatic login (with blank username to disable)"
+    echo "    greeter                           Run greeter setup wizard"
+    echo "    greeter-create [file]             Set the specified executable file as Greeter"
+    echo "    greeter-change [greeter]          Specify the greeter to use"
+    echo "    greeter-edit [greeter]            Edit the greeter configs"
+    echo "    greeter-list                      Shows a list of currently installed Greeters"
+    echo "    remove                            Removes all changes made by this command"
+    echo "    edit                              Edit lightdm config"
     echo
     echo " General option:"
-    echo "    -e | --editer                  Specifies the editor to use for editing"
-    echo "    -h | --help                    This help message and exit"
-    echo "    --comment-replace"
+    echo "    -e | --editer                     Specifies the editor to use for editing"
+    echo "    -h | --help                       This help message and exit"
+    echo "    --comment-replace                 Replace the commented out value."
+    echo "    --non-interactive                 Run in non-interactive mode"
 }
 
 set -e
@@ -298,8 +300,8 @@ run_auto_login(){
             echo "Canceled automatic login of ${autologin_user}"
         fi
     else
-        local autologin_session
         local autologin_user="${1}"
+        local autologin_session="${2}"
 
         # ユーザーチェック
         if ! getent passwd "${autologin_user}" 1> /dev/null 2>&1; then
@@ -308,20 +310,38 @@ run_auto_login(){
         fi
 
         # セッションを設定
-        if (( $(ls "/usr/share/xsessions" 2> /dev/null | wc -l) <= 1 )); then
-            autologin_session="$(ls "/usr/share/xsessions" | sed 's|.desktop$||g')"
-        else
-            echo "Select the desktop session to autologin"
-            local session
-            for session in "/usr/share/xsessions/"*; do
-                echo "   ${session}"
-            done
-            echo -n "(session name) > "
-            read session
-            if [[ -f "/usr/share/xsessions/${session}.desktop" ]]; then
-                autologin_session="${session}"
+        if [[ -z "${autologin_session}" ]]; then
+            if (( $(ls "/usr/share/xsessions" 2> /dev/null | wc -l) <= 1 )); then
+                autologin_session="$(ls "/usr/share/xsessions" | sed 's|.desktop$||g')"
+            elif [[ "${NON_INTERACTIVE}" = true ]]; then
+                # 非対話モード
+                # ~/.dmrcの値を設定します
+                autologin_session="$(cat "${HOME}/.dmrc" | grep -E '^Session=' | cut -d '=' -f 2)"
+                if [[ -z "${autologin_session}" ]]; then
+                    msg_error "Failed to set the session."
+                    msg_error "Not specified and ~/.dmrc does not exist either."
+                    exit 1
+                fi
             else
-                msg_error "Please enter the correct session name."
+                echo "Select the desktop session to autologin"
+                local session
+                for session in "/usr/share/xsessions/"*; do
+                    echo "   ${session}"
+                done
+                echo -n "(session name) > "
+                read session
+                if [[ -f "/usr/share/xsessions/${session}.desktop" ]]; then
+                    autologin_session="${session}"
+                else
+                    msg_error "Please enter the correct session name."
+                    exit 1
+                fi
+            fi
+        else
+            # 既に値が設定済み
+            if [[ ! -f "/usr/xsessions/${autologin_session}.desktop" ]]; then
+                # 存在しないセッションが指定された場合
+                msg_error "This is a session (${autologin_session}) that does not exist."
                 exit 1
             fi
         fi
@@ -347,7 +367,7 @@ run_auto_login(){
 # 引数を解析
 ARGUMENT="${@}"
 OPTS="eh"
-OPTL="editor:,help,comment-replace"
+OPTL="editor:,help,comment-replace,non-interactive"
 OPT="$(getopt -o ${OPTS} -l ${OPTL} -- ${ARGUMENT})"
 (( ${?} != 0 )) && exit 1
 
@@ -366,6 +386,10 @@ while true; do
             ;;
         --comment-replace)
             COMMENT_REPLACE=true
+            shift 1
+            ;;
+        --non-interactive)
+            NON_INTERACTIVE=true
             shift 1
             ;;
         --)
