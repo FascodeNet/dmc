@@ -295,6 +295,9 @@ case "${COMMAND}" in
     "greeter-list")
         run_greeter_list
         ;;
+    "greeter-edit")
+        run_greeter_edit
+        ;;
     "remove")
         run_remove
         ;;
