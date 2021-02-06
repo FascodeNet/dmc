@@ -276,11 +276,13 @@ run_auto_login(){
         local autologin_session
         local autologin_user="${1}"
 
+        # ユーザーチェック
         if ! getent passwd "${autologin_user}" 1> /dev/null 2>&1; then
             echo "${autologin_user} is a non-existent user."
             exit 1
         fi
 
+        # セッションを設定
         if (( $(ls "/usr/share/xsessions" 2> /dev/null | wc -l) <= 1 )); then
             autologin_session="$(ls "/usr/share/xsessions" | sed 's|.desktop$||g')"
         else
@@ -299,6 +301,13 @@ run_auto_login(){
             fi
         fi
 
+        # autologin グループを設定
+        if ! getent group "autologin" 1> /dev/null 2>&1; then
+            groupadd -r "autologin"
+        fi
+        gpasswd -a "${autologin_user}" "autologin"
+
+        # 設定を書き込み
         set_config "autologin-guest" "false"
         set_config "autologin-user" "${autologin_user}"
         set_config "autologin-user-timeout" "0"
