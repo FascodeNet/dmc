@@ -36,6 +36,7 @@ script_usage(){
     echo " General command:"
     echo "    autologin [username]           Set up automatic login (with blank username to disable)"
     echo "    greeter                        Run greeter setup wizard"
+    echo "    greeter-create [file]          Set the specified executable file as Greeter"
     echo "    greeter-change [greeter]       Specify the greeter to use"
     echo "    greeter-edit [greeter]         Edit the greeter configs"
     echo "    greeter-list                   Shows a list of currently installed Greeters"
@@ -135,6 +136,40 @@ run_greeter_change() {
     else
         set_config "greeter-session" "${1}"
     fi
+}
+
+# greeter-createコマンド
+run_greeter_create(){
+    if [[ -z "${1}" ]]; then
+        msg_error "Please specify Greeter."
+        script_usage
+        exit 1
+    fi
+    if [[ ! -f "${1}" ]]; then
+        msg_error "${1} does not exist."
+        script_usage
+        exit 1
+    fi
+    if [[ ! -x "${1}" ]]; then
+        msg_error "hoge is not an executable file."
+        script_usage
+        exit 1
+    fi
+
+    local path="${1}"
+    local filename="$(basename "${1}")"
+
+    if [[ -f "/usr/share/xgreeters/${filename}.desktop" ]]; then
+        msg_error "Greeter with the same name already exists."
+        exit 1
+    fi
+    cat > "/usr/share/xgreeters/${filename}.desktop"  <<EOF
+[Desktop Entry]
+Name=LightDM custom Greeter ${filename}
+Comment=LightDM Greeter
+Exec=${path}
+Type=Application
+EOF
 }
 
 # greeter-listコマンド
@@ -325,6 +360,10 @@ case "${COMMAND}" in
     "greeter-change")
         init_configs
         run_greeter_change "${1}"
+        ;;
+    "greeter-create")
+        init_configs
+        run_greeter_create "${1}"
         ;;
     "greeter-list")
         run_greeter_list
