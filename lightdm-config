@@ -195,6 +195,9 @@ run_greeter_edit(){
     local _greeter
     if [[ -z "${1}" ]]; then
         msg_warn "Greeter was not specified. Open the currently configured Greeter configuration file."
+        echo -n "(Enter to continue) > "
+        read
+        echo
         _greeter="${CURRENT_GREETER}"
     else
         _greeter="${1}"
