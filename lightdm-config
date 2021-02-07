@@ -448,7 +448,7 @@ case "${COMMAND}" in
         ;;
     "greeter-edit")
         check_root
-        run_greeter_edit
+        run_greeter_edit "${1}"
         ;;
     "remove")
         check_root
