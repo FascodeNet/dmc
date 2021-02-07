@@ -1,0 +1,21 @@
+#compdef lightdm-config
+
+_lightdm_config(){
+    _arguments \
+        "(-e --editor)"{-e,--editor}"[Specifies the editor to use for editing]:fabric file:_files" \
+        "*: :__lightdm_config_commands"
+}
+
+__lightdm_config_commands(){
+    _values -w "Commands:" \
+        "autologin[Set up automatic login (with blank username to disable)]" \
+        "greeter[Run greeter setup wizard]" \
+        "greeter-create[Set the specified executable file as Greeter]:fabric file:_files" \
+        "greeter-change[Specify the greeter to use]" \
+        "greeter-edit[Edit the greeter configs]" \
+        "greeter-list[Shows a list of currently installed Greeters]" \
+        "remove[Removes all changes made by this command]" \
+        "edit[Edit lightdm config]"
+}
+
+compdef _lightdm_config lightdm-config
