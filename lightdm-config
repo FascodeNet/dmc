@@ -209,6 +209,10 @@ run_greeter_wizard(){
     echo -n "(1 ~ ${#GREETERS[@]}) > "
     read -n 1 _input
     echo
+    if [[ -z "${_input+SET}" ]] || ! printf "${_input}" | grep -E "^[0-9]+$" >/dev/null 2>&1 || ! (( 1 <= _input <= ${#GREETERS[@]} )); then # 正しい値か確認
+        echo "Please enter the correct value."
+        exit 1
+    fi
     _greeter="${GREETERS[$(( _input - 1 ))]}"
     if [[ -n "${_greeter}" ]]; then
         run_greeter_change "${_greeter}"
@@ -246,7 +250,7 @@ run_greeter_edit(){
         msg_error "https://github.com/FascodeNet/lightdm-config/issues"
         exit 1
     else
-        if [[ -v 1 ]]; then
+        if [[ -z ${1} ]]; then
             msg_warn "Greeter was not specified. Open the currently configured Greeter configuration file."
             echo -n "(Enter to continue) > "
             read
@@ -275,19 +279,21 @@ run_edit(){
 
 # autologin
 run_auto_login(){
-    if [[ -z "${1}" ]]; then
+    if [[ -z "${1+SET}" ]]; then
         # 既に自動ログインが設定されているかを確認
         local autologin_user="$(get_value autologin-user)"
-            if [[ -n "${autologin_user}" ]]; then
-            # autologinを無効化
-            for _autologin in "autologin-guest" "autologin-user" "autologin-user-timeout" "autologin-in-background" "autologin-session"; do
-                remove_key "${_autologin}"
-            done
-            echo "Canceled automatic login of ${autologin_user}"
+        if [[ -n "${autologin_user}" ]]; then
+        # autologinを無効化
+        for _autologin in "autologin-guest" "autologin-user" "autologin-user-timeout" "autologin-in-background" "autologin-session"; do
+            remove_key "${_autologin}"
+        done
+        echo "Canceled automatic login of ${autologin_user}"
         fi
     else
-        local autologin_user="${1}"
-        local autologin_session="${2}"
+        local autologin_user="${1}" autologin_session
+        if [[ -v 2 ]]; then
+            autologin_session="${2}"
+        fi
 
         # ユーザーチェック
         if ! getent passwd "${autologin_user}" 1> /dev/null 2>&1; then
@@ -296,7 +302,7 @@ run_auto_login(){
         fi
 
         # セッションを設定
-        if [[ -z "${autologin_session}" ]]; then
+        if [[ -z "${autologin_session+SET}" ]]; then
             if (( $(ls "/usr/share/xsessions" 2> /dev/null | wc -l) <= 1 )); then
                 autologin_session="$(ls "/usr/share/xsessions" | sed 's|.desktop$||g')"
             elif [[ "${NON_INTERACTIVE}" = true ]]; then
@@ -325,7 +331,7 @@ run_auto_login(){
             fi
         else
             # 既に値が設定済み
-            if [[ ! -f "/usr/xsessions/${autologin_session}.desktop" ]]; then
+            if [[ ! -f "/usr/share/xsessions/${autologin_session}.desktop" ]]; then
                 # 存在しないセッションが指定された場合
                 msg_error "This is a session (${autologin_session}) that does not exist."
                 exit 1
@@ -334,9 +340,9 @@ run_auto_login(){
 
         # autologin グループを設定
         if ! getent group "autologin" 1> /dev/null 2>&1; then
-            groupadd -r "autologin"
+            LANG=C groupadd -r "autologin"
         fi
-        gpasswd -a "${autologin_user}" "autologin"
+        LANG=C gpasswd -a "${autologin_user}" "autologin"
 
         # 設定を書き込み
         set_config "autologin-guest" "false"
@@ -414,11 +420,14 @@ while true; do
 done
 shift 1
 
+COMMAND_ARGS="${@}"
+: ${COMMAND_ARGS-""} # サブコマンドの引数が何も指定されなかった場合に空文字を代入
+
 case "${COMMAND}" in
     "autologin")
         init_configs
         check_root
-        run_auto_login "${1}"
+        run_auto_login ${COMMAND_ARGS}
         ;;
     "greeter")
         init_configs
@@ -428,19 +437,19 @@ case "${COMMAND}" in
     "greeter-change")
         init_configs
         check_root
-        run_greeter_change "${1}"
+        run_greeter_change ${COMMAND_ARGS}
         ;;
     "greeter-create")
         init_configs
         check_root
-        run_greeter_create "${1}"
+        run_greeter_create ${COMMAND_ARGS}
         ;;
     "greeter-list")
         run_greeter_list
         ;;
     "greeter-edit")
         check_root
-        run_greeter_edit "${1}"
+        run_greeter_edit ${COMMAND_ARGS}
         ;;
     "remove")
         check_root
