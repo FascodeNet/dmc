@@ -11,31 +11,10 @@
 # LICENSE: THE SUSHI-WARE LICENSE
 # https://github.com/MakeNowJust/sushi-ware
 #
-
-declare -A GREETER_CONFIG=(
-    ["lightdm-webkit2-greeter"]="/etc/lightdm/lightdm-webkit2-greeter.conf"
-    ["lightdm-slick-greeter"]="/etc/lightdm/slick-greeter.conf"
-    ["lightdm-gtk-greeter"]="/etc/lightdm/lightdm-gtk-greeter.conf"
-    ["io.elementary.greeter"]="/etc/lightdm/io.elementary.greeter.conf"
-    ["lightdm-mini-greeter"]="/etc/lightdm/lightdm-mini-greeter.conf"
-)
-
-USE_EDITOR="vi"
-COMMAND="null"
-LIGHTDM_CONFIG="/etc/lightdm/lightdm.conf.d/00-lightdm-config-command.conf"
-COMMENT_REPLACE=false
-NON_INTERACTIVE=false
-GREETERS=($(ls "/usr/share/xgreeters" | sed "s|.desktop$||g"))
-CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" | cut -d "=" -f 2)"
-LOADED_LIGHTDM_CONFIG=(
-    $(
-        printf "%s\n" $(
-        lightdm --show-config 2>&1 | \
-            grep -x -A "$(lightdm --show-config 2>&1 | wc -l)" "Sources:" | \
-            grep -v "Sources") | \
-            sed -E "s|^[A-Z]$||g"
-    )
-)
+#
+# 参考資料
+# https://qiita.com/laikuaut/items/4bc07eabce56ee30812d
+# https://qiita.com/t_nakayama0714/items/80b4c94de43643f4be51
 
 script_usage(){
     echo "usage lightdm-greeter [options] [command]"
@@ -59,13 +38,7 @@ script_usage(){
     echo "    --non-interactive                 Run in non-interactive mode"
 }
 
-set -e
-
-# エディタを設定
-if [[ -v EDITOR ]]; then
-    USE_EDITOR="${EDITOR}"
-fi
-
+set -eu
 
 # エラー
 msg_error() {
@@ -266,22 +239,19 @@ run_greeter_edit(){
         msg_error "You cannot use this command in non-interactive mode."
         exit 1
     fi
-    local _greeter
-    if [[ -z "${1}" ]]; then
-        msg_warn "Greeter was not specified. Open the currently configured Greeter configuration file."
-        echo -n "(Enter to continue) > "
-        read
-        echo
-        _greeter="${CURRENT_GREETER}"
-    else
-        _greeter="${1}"
-    fi
-    if [[ -z "${GREETER_CONFIG["${_greeter}"]}" ]]; then
+    local _greeter="${1:-${CURRENT_GREETER}}"
+    if [[ -z "${GREETER_CONFIG["${_greeter}"]+SET}" ]]; then
         msg_error "This Greeter is not currently supported."
         msg_error "Please report the problem here."
         msg_error "https://github.com/FascodeNet/lightdm-config/issues"
         exit 1
     else
+        if [[ -v 1 ]]; then
+            msg_warn "Greeter was not specified. Open the currently configured Greeter configuration file."
+            echo -n "(Enter to continue) > "
+            read
+        fi
+        set -u
         bash -c "${USE_EDITOR} ${GREETER_CONFIG["${_greeter}"]}"
         exit
     fi
@@ -380,6 +350,34 @@ run_auto_login(){
 
 }
 
+# 変数を設定
+declare -A GREETER_CONFIG=(
+    ["lightdm-webkit2-greeter"]="/etc/lightdm/lightdm-webkit2-greeter.conf"
+    ["lightdm-slick-greeter"]="/etc/lightdm/slick-greeter.conf"
+    ["lightdm-gtk-greeter"]="/etc/lightdm/lightdm-gtk-greeter.conf"
+    ["io.elementary.greeter"]="/etc/lightdm/io.elementary.greeter.conf"
+    ["lightdm-mini-greeter"]="/etc/lightdm/lightdm-mini-greeter.conf"
+)
+
+USE_EDITOR="${EDITOR:-vi}"
+COMMAND="${1:-null}"
+LIGHTDM_CONFIG="/etc/lightdm/lightdm.conf.d/00-lightdm-config-command.conf"
+COMMENT_REPLACE=false
+NON_INTERACTIVE=false
+GREETERS_DIR="$(get_value "greeters-directory")"
+: ${GREETERS_DIR:="/usr/share/xgreeters"} # デフォルト値を設定
+GREETERS=($(ls "${GREETERS_DIR}" | sed "s|.desktop$||g"))
+CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" | cut -d "=" -f 2)"
+LOADED_LIGHTDM_CONFIG=(
+    $(
+        printf "%s\n" $(
+        lightdm --show-config 2>&1 | \
+            grep -x -A "$(lightdm --show-config 2>&1 | wc -l)" "Sources:" | \
+            grep -v "Sources") | \
+            sed -E "s|^[A-Z]$||g"
+    )
+)
+
 # 引数を解析
 ARGUMENT="${@}"
 OPTS="eh"
@@ -414,12 +412,6 @@ while true; do
             ;;
     esac
 done
-
-if [[ -z "${1}" ]]; then
-    script_usage
-    exit 1
-fi
-COMMAND="${1}"
 shift 1
 
 case "${COMMAND}" in
