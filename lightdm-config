@@ -27,9 +27,10 @@ script_usage(){
     echo "    greeter-create [file]             Set the specified executable file as Greeter"
     echo "    greeter-change [greeter]          Specify the greeter to use"
     echo "    greeter-edit [greeter]            Edit the greeter configs"
-    echo "    greeter-list                      Shows a list of currently installed Greeters"
+    echo "    greeter-list                      Show a list of currently installed Greeters"
     echo "    remove                            Removes all changes made by this command"
     echo "    edit                              Edit lightdm config"
+    echo "    show-config                       Show current settings"
     echo
     echo " General option:"
     echo "    -e | --editer                     Specifies the editor to use for editing"
@@ -459,6 +460,9 @@ case "${COMMAND}" in
         check_root
         run_edit
         ;;
+    "show-config")
+        lightdm --show-config 2>&1
+        ;;
     "null")
         script_usage
         exit 1
@@ -467,3 +471,4 @@ case "${COMMAND}" in
         msg_error "Undefined commnad(${COMMAND})"
         ;;
 esac
+exit 0
