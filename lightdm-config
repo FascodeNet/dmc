@@ -366,7 +366,6 @@ declare -A GREETER_CONFIG=(
 )
 
 USE_EDITOR="${EDITOR:-vi}"
-COMMAND="${1:-null}"
 LIGHTDM_CONFIG="/etc/lightdm/lightdm.conf.d/00-lightdm-config-command.conf"
 COMMENT_REPLACE=false
 NON_INTERACTIVE=false
@@ -386,7 +385,7 @@ LOADED_LIGHTDM_CONFIG=(
 
 # 引数を解析
 ARGUMENT="${@}"
-OPTS="eh"
+OPTS="e:h"
 OPTL="editor:,help,comment-replace,non-interactive"
 OPT="$(getopt -o ${OPTS} -l ${OPTL} -- ${ARGUMENT})"
 (( ${?} != 0 )) && exit 1
@@ -418,8 +417,9 @@ while true; do
             ;;
     esac
 done
-shift 1
 
+COMMAND="${1:-null}"
+shift 1
 COMMAND_ARGS="${@}"
 : ${COMMAND_ARGS-""} # サブコマンドの引数が何も指定されなかった場合に空文字を代入
 
@@ -464,6 +464,6 @@ case "${COMMAND}" in
         exit 1
         ;;
     *)
-        msg_error "Undefined commnad"
+        msg_error "Undefined commnad(${COMMAND})"
         ;;
 esac
