@@ -206,7 +206,7 @@ run_greeter_wizard(){
         fi
         unset _greeter
     done
-    echo -n "(0 ~ ${#GREETERS[@]}) > "
+    echo -n "(1 ~ ${#GREETERS[@]}) > "
     read -n 1 _input
     echo
     _greeter="${GREETERS[$(( _input - 1 ))]}"
