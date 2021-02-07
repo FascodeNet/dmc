@@ -77,6 +77,14 @@ msg_warn() {
     echo "${@}" 1>&2
 }
 
+# rootチェック
+check_root(){
+    if (( "${UID}" != 0 )); then
+        msg_error "You have to run as root"
+        exit 1
+    fi
+}
+
 # 設定ファイルに書き込む
 write_config(){
     echo "${@}" >> "${LIGHTDM_CONFIG}"
@@ -417,30 +425,37 @@ shift 1
 case "${COMMAND}" in
     "autologin")
         init_configs
+        check_root
         run_auto_login "${1}"
         ;;
     "greeter")
         init_configs
+        check_root
         run_greeter_wizard
         ;;
     "greeter-change")
         init_configs
+        check_root
         run_greeter_change "${1}"
         ;;
     "greeter-create")
         init_configs
+        check_root
         run_greeter_create "${1}"
         ;;
     "greeter-list")
         run_greeter_list
         ;;
     "greeter-edit")
+        check_root
         run_greeter_edit
         ;;
     "remove")
+        check_root
         run_remove
         ;;
     "edit")
+        check_root
         run_edit
         ;;
     "null")
