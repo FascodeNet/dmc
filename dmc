@@ -386,6 +386,8 @@ gdm_init_configs(){
 #== GDM用コマンド ==#
 command_gdm_cursor_wizard(){
     # カーソルテーマの一覧を取得
+    # 参考: https://wiki.archlinux.jp/index.php/%E3%82%AB%E3%83%BC%E3%82%BD%E3%83%AB%E3%83%86%E3%83%BC%E3%83%9E
+    # 参考: https://wiki.archlinux.jp/index.php/GDM
     local _dir _cursor_theme_dir_list _find_cursor_dir_list=("/usr/share/icons" "${HOME}/.local/share/icons" "${HOME}/.icons")
     for _dir in ${_find_cursor_dir_list[@]}; do
         if [[ -d "${_dir}" ]]; then
