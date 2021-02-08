@@ -435,7 +435,9 @@ while true; do
 done
 
 COMMAND="${1:-null}"
-shift 1
+if (( "${#}" >= 1 )); then
+    shift 1
+fi
 COMMAND_ARGS="${@}"
 : ${COMMAND_ARGS-""} # サブコマンドの引数が何も指定されなかった場合に空文字を代入
 
