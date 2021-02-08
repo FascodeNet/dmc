@@ -6,7 +6,7 @@
 #
 # (c) 2019-2021 Fascode Network.
 #
-# lightdm-config - A simple tool for editing LightDM
+# dmc
 #
 # LICENSE: THE SUSHI-WARE LICENSE
 # https://github.com/MakeNowJust/sushi-ware
@@ -17,11 +17,11 @@
 # https://qiita.com/t_nakayama0714/items/80b4c94de43643f4be51
 
 script_usage(){
-    echo "usage lightdm-greeter [options] [command]"
+    echo "usage: dmc [options] [command]"
     echo
     echo "A simple tool for switching LightDM Greeters"
     echo
-    echo " General command:"
+    echo " LightDM command:"
     echo "    autologin [username] [session]    Set up automatic login (with blank username to disable)"
     echo "    greeter                           Run greeter setup wizard"
     echo "    greeter-create [file]             Set the specified executable file as Greeter"
@@ -65,7 +65,7 @@ write_config(){
 }
 
 # キーが設定されている設定ファイル
-get_source_file(){
+lightdm_get_source_file(){
     local key="${1}"
     local source_name="$(lightdm --show-config 2>&1 | grep -E "^[A-Z]  ${key}=" | cut -d ' ' -f 1)"
     local source_path="$(lightdm --show-config 2>&1 | grep -x -A "$(lightdm --show-config 2>&1 | wc -l)" "Sources:" | grep -xv "Sources" | grep -E "^${source_name}  " | sed "s|^${source_name}  ||g")"
@@ -78,7 +78,7 @@ get_source_file(){
 
 
 # 設定ファイルの値を変更する
-set_config(){
+lightdm_set_config(){
     local key="${1}" value="${2}"
     if [[ "${COMMENT_REPLACE}" = true ]]; then
         if cat "${LIGHTDM_CONFIG}" | grep -E "^#? ?${key} ?=" > /dev/null; then
@@ -94,7 +94,7 @@ set_config(){
     fi
 
     if [[ ! "$(get_value "${1}")" = "${2}" ]]; then
-        msg_error "Failed to change the setting value. A value has already been set for $(get_source_file "${1}")"
+        msg_error "Failed to change the setting value. A value has already been set for $(lightdm_get_source_file "${1}")"
         msg_error "lightdm-config does not manipulate other configuration files for safety. Comment out the settings in that file."
     fi
 }
@@ -130,7 +130,7 @@ get_value(){
 }
 
 # greeter-changeコマンド
-run_greeter_change() {
+command_lightdm_greeter_change() {
     # 引数チェック
     if [[ -z "${1}" ]]; then
         msg_error "Please specify Greeter."
@@ -143,12 +143,12 @@ run_greeter_change() {
         msg_error "The greeter (${1}) doesn't exist."
         exit 1
     else
-        set_config "greeter-session" "${1}"
+        lightdm_set_config "greeter-session" "${1}"
     fi
 }
 
 # greeter-createコマンド
-run_greeter_create(){
+command_lightdm_greeter_create(){
     if [[ -z "${1}" ]]; then
         msg_error "Please specify Greeter."
         script_usage
@@ -182,7 +182,7 @@ EOF
 }
 
 # greeter-listコマンド
-run_greeter_list() {
+command_lightdm_greeter_list() {
     echo "Available Lightdm greeter list:"
     local _greeter
     for _greeter in ${GREETERS[@]}; do
@@ -216,7 +216,7 @@ run_greeter_wizard(){
     fi
     _greeter="${GREETERS[$(( _input - 1 ))]}"
     if [[ -n "${_greeter}" ]]; then
-        run_greeter_change "${_greeter}"
+        command_lightdm_greeter_change "${_greeter}"
     else
         run_greeter_wizard
         exit 0
@@ -225,7 +225,7 @@ run_greeter_wizard(){
 }
 
 # removeコマンド
-run_remove(){
+command_lightdm_remove(){
     if [[ ! -f "${LIGHTDM_CONFIG}" ]]; then
         return 0
     else
@@ -239,7 +239,7 @@ run_remove(){
 }
 
 # greeter-edit
-run_greeter_edit(){
+command_lightdm_greeter_edit(){
     if [[ "${NON_INTERACTIVE}" = true ]]; then
         msg_error "You cannot use this command in non-interactive mode."
         exit 1
@@ -279,7 +279,7 @@ run_edit(){
 }
 
 # autologin
-run_auto_login(){
+command_lightdm_auto_login(){
     if [[ -z "${1+SET}" ]]; then
         # 既に自動ログインが設定されているかを確認
         local autologin_user="$(get_value autologin-user)"
@@ -346,15 +346,20 @@ run_auto_login(){
         LANG=C gpasswd -a "${autologin_user}" "autologin"
 
         # 設定を書き込み
-        set_config "autologin-guest" "false"
-        set_config "autologin-user" "${autologin_user}"
-        set_config "autologin-user-timeout" "0"
-        set_config "autologin-in-background" "false"
-        set_config "autologin-session" "${autologin_session}"
+        lightdm_set_config "autologin-guest" "false"
+        lightdm_set_config "autologin-user" "${autologin_user}"
+        lightdm_set_config "autologin-user-timeout" "0"
+        lightdm_set_config "autologin-in-background" "false"
+        lightdm_set_config "autologin-session" "${autologin_session}"
 
         echo "${autologin_user} will automatically log in with ${autologin_session}"
     fi
 
+}
+
+# show-config
+command_lightdm_show_config(){
+   lightdm --show-config 2>&1 
 }
 
 # 変数を設定
@@ -367,6 +372,7 @@ declare -A GREETER_CONFIG=(
 )
 
 USE_EDITOR="${EDITOR:-vi}"
+DISPLAY_MANAGER="lightdm"
 LIGHTDM_CONFIG="/etc/lightdm/lightdm.conf.d/00-lightdm-config-command.conf"
 COMMENT_REPLACE=false
 NON_INTERACTIVE=false
@@ -428,7 +434,7 @@ case "${COMMAND}" in
     "autologin")
         init_configs
         check_root
-        run_auto_login ${COMMAND_ARGS}
+        command_lightdm_auto_login ${COMMAND_ARGS}
         ;;
     "greeter")
         init_configs
@@ -438,30 +444,30 @@ case "${COMMAND}" in
     "greeter-change")
         init_configs
         check_root
-        run_greeter_change ${COMMAND_ARGS}
+        command_lightdm_greeter_change ${COMMAND_ARGS}
         ;;
     "greeter-create")
         init_configs
         check_root
-        run_greeter_create ${COMMAND_ARGS}
+        command_lightdm_greeter_create ${COMMAND_ARGS}
         ;;
     "greeter-list")
-        run_greeter_list
+        command_lightdm_greeter_list
         ;;
     "greeter-edit")
         check_root
-        run_greeter_edit ${COMMAND_ARGS}
+        command_lightdm_greeter_edit ${COMMAND_ARGS}
         ;;
     "remove")
         check_root
-        run_remove
+        command_lightdm_remove
         ;;
     "edit")
         check_root
         run_edit
         ;;
     "show-config")
-        lightdm --show-config 2>&1
+        command_lightdm_show_config
         ;;
     "null")
         script_usage
