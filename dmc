@@ -33,10 +33,15 @@ script_usage(){
     echo "    show-config                       Show current settings"
     echo
     echo " General option:"
-    echo "    -e | --editer                     Specifies the editor to use for editing"
+    echo "    -d | --display-manager            Specifiy the display manager"
+    echo "    -e | --editer                     Specifiy the editor to use for editing"
     echo "    -h | --help                       This help message and exit"
     echo "    --comment-replace                 Replace the commented out value."
     echo "    --non-interactive                 Run in non-interactive mode"
+    echo
+    echo " Supported display manager:"
+    echo "    lightdm"
+    echo
 }
 
 set -eu
@@ -100,7 +105,7 @@ lightdm_set_config(){
 }
 
 # 設定ファイルのキーを削除する
-remove_key(){
+lightdm_remove_key(){
     local key="${1}" _config
     if cat "${LIGHTDM_CONFIG}" | grep -E "^ ?${key}.+" > /dev/null; then
         sed -i -r "s|^ ?${key} ?=.+||g" "${LIGHTDM_CONFIG}"
@@ -109,7 +114,7 @@ remove_key(){
 }
 
 # 設定ファイルを作成
-init_configs(){
+lightdm_init_configs(){
     if [[ ! -f "${LIGHTDM_CONFIG}" ]]; then
         mkdir -p "$(dirname "${LIGHTDM_CONFIG}")"
         touch "${LIGHTDM_CONFIG}"
@@ -263,7 +268,7 @@ command_lightdm_greeter_edit(){
 }
 
 # edit
-run_edit(){
+command_lightdm_edit(){
     if [[ "${NON_INTERACTIVE}" = true ]]; then
         msg_error "You cannot use this command in non-interactive mode."
         exit 1
@@ -392,8 +397,8 @@ LOADED_LIGHTDM_CONFIG=(
 
 # 引数を解析
 ARGUMENT="${@}"
-OPTS="e:h"
-OPTL="editor:,help,comment-replace,non-interactive"
+OPTS="d:e:h"
+OPTL="display-manager:,editor:,help,comment-replace,non-interactive"
 OPT="$(getopt -o ${OPTS} -l ${OPTL} -- ${ARGUMENT})"
 (( ${?} != 0 )) && exit 1
 
@@ -402,6 +407,10 @@ unset OPT OPTS OPTL
 
 while true; do
     case "${1}" in
+        -d | --display-manager)
+            DISPLAY_MANAGER="${2}"
+            shift 2
+            ;;
         -e | --editor)
             USE_EDITOR="${2}"
             shift 2
@@ -430,51 +439,59 @@ shift 1
 COMMAND_ARGS="${@}"
 : ${COMMAND_ARGS-""} # サブコマンドの引数が何も指定されなかった場合に空文字を代入
 
-case "${COMMAND}" in
-    "autologin")
-        init_configs
-        check_root
-        command_lightdm_auto_login ${COMMAND_ARGS}
-        ;;
-    "greeter")
-        init_configs
-        check_root
-        run_greeter_wizard
-        ;;
-    "greeter-change")
-        init_configs
-        check_root
-        command_lightdm_greeter_change ${COMMAND_ARGS}
-        ;;
-    "greeter-create")
-        init_configs
-        check_root
-        command_lightdm_greeter_create ${COMMAND_ARGS}
-        ;;
-    "greeter-list")
-        command_lightdm_greeter_list
-        ;;
-    "greeter-edit")
-        check_root
-        command_lightdm_greeter_edit ${COMMAND_ARGS}
-        ;;
-    "remove")
-        check_root
-        command_lightdm_remove
-        ;;
-    "edit")
-        check_root
-        run_edit
-        ;;
-    "show-config")
-        command_lightdm_show_config
-        ;;
-    "null")
-        script_usage
-        exit 1
+case "${DISPLAY_MANAGER}" in
+    "lightdm")
+        case "${COMMAND}" in
+            "autologin")
+                lightdm_init_configs
+                check_root
+                command_lightdm_auto_login ${COMMAND_ARGS}
+                ;;
+            "greeter")
+                lightdm_init_configs
+                check_root
+                run_greeter_wizard
+                ;;
+            "greeter-change")
+                lightdm_init_configs
+                check_root
+                command_lightdm_greeter_change ${COMMAND_ARGS}
+                ;;
+            "greeter-create")
+                lightdm_init_configs
+                check_root
+                command_lightdm_greeter_create ${COMMAND_ARGS}
+                ;;
+            "greeter-list")
+                command_lightdm_greeter_list
+                ;;
+            "greeter-edit")
+                check_root
+                command_lightdm_greeter_edit ${COMMAND_ARGS}
+                ;;
+            "remove")
+                check_root
+                command_lightdm_remove
+                ;;
+            "edit")
+                check_root
+                command_lightdm_edit
+                ;;
+            "show-config")
+                command_lightdm_show_config
+                ;;
+            "null")
+                script_usage
+                exit 1
+                ;;
+            *)
+                msg_error "Undefined commnad(${COMMAND})"
+                ;;
+        esac
         ;;
     *)
-        msg_error "Undefined commnad(${COMMAND})"
+        msg_error "A display manager that is not currently supported."
+        exit 1
         ;;
 esac
 exit 0
