@@ -38,6 +38,7 @@ script_usage(){
     echo "    -h | --help                       This help message and exit"
     echo "    --comment-replace                 Replace the commented out value."
     echo "    --non-interactive                 Run in non-interactive mode"
+    echo "    --noroot                          No check root permission"
     echo
     echo " Supported display manager:"
     echo "    lightdm"
@@ -58,7 +59,7 @@ msg_warn() {
 
 # rootチェック
 check_root(){
-    if (( "${UID}" != 0 )); then
+    if [[ "${NOROOT}" = false ]] && (( "${UID}" != 0 )); then
         msg_error "You have to run as root"
         exit 1
     fi
@@ -69,6 +70,7 @@ write_config(){
     echo "${@}" >> "${LIGHTDM_CONFIG}"
 }
 
+#== LightDM用の汎用関数 ==#
 # キーが設定されている設定ファイル
 lightdm_get_source_file(){
     local key="${1}"
@@ -98,7 +100,7 @@ lightdm_set_config(){
         write_config "${1}=${2}"
     fi
 
-    if [[ ! "$(get_value "${1}")" = "${2}" ]]; then
+    if [[ ! "$(lightdm_get_value "${1}")" = "${2}" ]]; then
         msg_error "Failed to change the setting value. A value has already been set for $(lightdm_get_source_file "${1}")"
         msg_error "lightdm-config does not manipulate other configuration files for safety. Comment out the settings in that file."
     fi
@@ -123,7 +125,7 @@ lightdm_init_configs(){
 }
 
 # 現在設定されている値を取得する
-get_value(){
+lightdm_get_value(){
     local _current_value="$(lightdm --show-config 2>&1 | grep -E "^[A-Z]  ${1}=" | sed "s|^[A-Z]  ||g" | cut -d "=" -f "2")"
     if [[ "${_current_value}" ]]; then
         echo -n "${_current_value}"
@@ -134,6 +136,7 @@ get_value(){
     fi
 }
 
+#== LightDM用コマンド ==#
 # greeter-changeコマンド
 command_lightdm_greeter_change() {
     # 引数チェック
@@ -287,7 +290,7 @@ command_lightdm_edit(){
 command_lightdm_auto_login(){
     if [[ -z "${1+SET}" ]]; then
         # 既に自動ログインが設定されているかを確認
-        local autologin_user="$(get_value autologin-user)"
+        local autologin_user="$(lightdm_get_value autologin-user)"
         if [[ -n "${autologin_user}" ]]; then
         # autologinを無効化
         for _autologin in "autologin-guest" "autologin-user" "autologin-user-timeout" "autologin-in-background" "autologin-session"; do
@@ -367,6 +370,66 @@ command_lightdm_show_config(){
    lightdm --show-config 2>&1 
 }
 
+#== GDM用の汎用関数 ==#
+gdm_init_configs(){
+    if [[ ! -f "/etc/dconf/profile/gdm" ]]; then
+        mkdir -p "/etc/dconf/profile"
+        touch "/etc/dconf/profile/gdm"
+        echo -e "user-db:user\nsystem-db:gdm\nfile-db:/usr/share/gdm/greeter-dconf-defaults" > "/etc/dconf/profile/gdm"
+    fi
+    if [[ ! -f "${DISPLAY_MANAGER_CONFIG["gdm"]}" ]]; then
+        mkdir -p "$(dirname "${DISPLAY_MANAGER_CONFIG["gdm"]}")"
+        touch "${DISPLAY_MANAGER_CONFIG["gdm"]}"
+    fi
+}
+
+#== GDM用コマンド ==#
+command_gdm_cursor_wizard(){
+    # カーソルテーマの一覧を取得
+    local _dir _cursor_theme_dir_list _find_cursor_dir_list=("/usr/share/icons" "${HOME}/.local/share/icons" "${HOME}/.icons")
+    for _dir in ${_find_cursor_dir_list[@]}; do
+        if [[ -d "${_dir}" ]]; then
+            _cursor_theme_dir_list=($(find "${_dir}" -type d -name "cursors" | xargs -i dirname {} | sort))
+        fi
+    done
+    
+    local _cursor_theme _cursor_theme_name _temp
+    for _cursor_theme in ${_cursor_theme_dir_list[@]}; do
+        _temp+=("$(cat "${_cursor_theme}/cursor.theme" 2> /dev/null | grep -E "^Name=" | sed "s|^Name=||g")")
+        if [[ -z "${_temp}" ]]; then
+            _cursor_theme_name+=("$(basename "${_cursor_theme}")")
+        fi
+    done
+
+    # 一覧を生成
+    local _c
+    unset _cursor_theme
+    echo "Please select the cursor theme to use."
+    for (( _c=1; _c<=${#_cursor_theme_name[@]}; _c++)); do
+        _cursor_theme="${_cursor_theme_name[$(( _c - 1 ))]}"
+        echo "   ${_c}: ${_cursor_theme}"
+        unset _cursor_theme
+    done
+
+    # 質問する
+    local _input
+    echo -n "(1 ~ ${#_cursor_theme_name[@]}) > "
+    read -n 1 _input
+    echo
+    if [[ -z "${_input+SET}" ]] || ! printf "${_input}" | grep -E "^[0-9]+$" >/dev/null 2>&1 || ! (( 1 <= _input <= ${#_cursor_theme_name[@]} )); then # 正しい値か確認
+        echo "Please enter the correct value."
+        exit 1
+    fi
+    _cursor_theme="${_cursor_theme_name[$(( _input - 1 ))]}"
+    if [[ -n "${_cursor_theme}" ]]; then
+        echo "${_cursor_theme}に切り替え(実際の切り替えはまだ未実装)"
+    else
+        command_gdm_cursor_wizard
+        exit 0
+    fi
+    echo "Changed cursor to ${_cursor_theme}"
+}
+
 # 変数を設定
 declare -A GREETER_CONFIG=(
     ["lightdm-webkit2-greeter"]="/etc/lightdm/lightdm-webkit2-greeter.conf"
@@ -376,12 +439,18 @@ declare -A GREETER_CONFIG=(
     ["lightdm-mini-greeter"]="/etc/lightdm/lightdm-mini-greeter.conf"
 )
 
+declare -A DISPLAY_MANAGER_CONFIG=(
+    ["lightdm"]="/etc/lightdm/lightdm.conf.d/00-dmc-lightdm.conf"
+    ["gdm"]="/etc/dconf/db/gdm.d/00-dmc-gdm"
+)
+
 USE_EDITOR="${EDITOR:-vi}"
 DISPLAY_MANAGER="lightdm"
-LIGHTDM_CONFIG="/etc/lightdm/lightdm.conf.d/00-lightdm-config-command.conf"
+LIGHTDM_CONFIG="${DISPLAY_MANAGER_CONFIG["lightdm"]}"
 COMMENT_REPLACE=false
 NON_INTERACTIVE=false
-GREETERS_DIR="$(get_value "greeters-directory")"
+NOROOT=false
+GREETERS_DIR="$(lightdm_get_value "greeters-directory")"
 : ${GREETERS_DIR:="/usr/share/xgreeters"} # デフォルト値を設定
 GREETERS=($(ls "${GREETERS_DIR}" | sed "s|.desktop$||g"))
 CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" | cut -d "=" -f 2)"
@@ -398,7 +467,7 @@ LOADED_LIGHTDM_CONFIG=(
 # 引数を解析
 ARGUMENT="${@}"
 OPTS="d:e:h"
-OPTL="display-manager:,editor:,help,comment-replace,non-interactive"
+OPTL="display-manager:,editor:,help,comment-replace,non-interactive,noroot"
 OPT="$(getopt -o ${OPTS} -l ${OPTL} -- ${ARGUMENT})"
 (( ${?} != 0 )) && exit 1
 
@@ -425,6 +494,10 @@ while true; do
             ;;
         --non-interactive)
             NON_INTERACTIVE=true
+            shift 1
+            ;;
+        --noroot)
+            NOROOT=true
             shift 1
             ;;
         --)
@@ -485,6 +558,18 @@ case "${DISPLAY_MANAGER}" in
             "null")
                 script_usage
                 exit 1
+                ;;
+            *)
+                msg_error "Undefined commnad(${COMMAND})"
+                ;;
+        esac
+        ;;
+    "gdm")
+        case "${COMMAND}" in
+            "cursor")
+                check_root
+                gdm_init_configs
+                command_gdm_cursor_wizard
                 ;;
             *)
                 msg_error "Undefined commnad(${COMMAND})"
