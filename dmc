@@ -65,6 +65,19 @@ check_root(){
     fi
 }
 
+# 数値チェック
+check_int(){
+    set +e
+    #if (( "$(expr "${1}" + 1 >/dev/null 2>&1; printf "${?}")" < 2 )); then
+    if printf "${1}" | grep -E "^[0-9]+$" 1>/dev/null 2>&1; then
+        set -e
+        return 0
+    else
+        set -e
+        return 1
+    fi
+}
+
 # 設定ファイルに書き込む
 write_config(){
     echo "${@}" >> "${LIGHTDM_CONFIG}"
@@ -204,6 +217,7 @@ command_lightdm_greeter_list() {
 
 # greeterコマンド
 run_greeter_wizard(){
+    # 質問する
     local _c _greeter
     echo "Please select the greeter to use."
     for (( _c=1; _c<=${#GREETERS[@]}; _c++)); do
@@ -216,13 +230,33 @@ run_greeter_wizard(){
         unset _greeter
     done
     echo -n "(1 ~ ${#GREETERS[@]}) > "
-    read -n 1 _input
-    echo
-    if [[ -z "${_input+SET}" ]] || ! printf "${_input}" | grep -E "^[0-9]+$" >/dev/null 2>&1 || ! (( 1 <= _input <= ${#GREETERS[@]} )); then # 正しい値か確認
+    read _input
+
+    local _recall
+    _recall(){
         echo "Please enter the correct value."
-        exit 1
+        run_greeter_wizard
+        exit 0
+    }
+
+    # 回答を解析
+    if check_int "${_input}"; then
+        # 数字が入力された
+        if (( 1 <= _input)) && (( _input <= ${#GREETERS[@]} )); then
+            _greeter="${GREETERS[$(( _input - 1 ))]}"
+        else
+            _recall
+        fi
+    else
+        # 文字が入力された
+        if printf "%s\n" "${GREETERS[@]}" | grep -x "${_input}" 1>/dev/null 2>&1; then
+            _greeter="${_input}"
+        else
+            _recall
+        fi
     fi
-    _greeter="${GREETERS[$(( _input - 1 ))]}"
+
+    # 結果に応じて処理を実行
     if [[ -n "${_greeter}" ]]; then
         command_lightdm_greeter_change "${_greeter}"
     else
@@ -468,6 +502,7 @@ GREETERS_DIR="$(lightdm_get_value "greeters-directory")"
 : ${GREETERS_DIR:="/usr/share/xgreeters"} # デフォルト値を設定
 GREETERS=($(ls "${GREETERS_DIR}" | sed "s|.desktop$||g"))
 CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" | cut -d "=" -f 2)"
+: ${CURRENT_GREETER:="lightdm-gtk-greeter"}
 LOADED_LIGHTDM_CONFIG=(
     $(
         printf "%s\n" $(
