@@ -420,7 +420,7 @@ gdm_init_configs(){
 # gdm_set_config <dconf path> <key> <value>
 gdm_set_config(){
     local _path="${1}" _key="${2}" _value="${3}"
-    echo -e "[${_path}]\n${_key}='$_value'" >> "${DISPLAY_MANAGER_CONFIG["gdm"]}"
+    echo -e "[${_path}]\n${_key}='$_value'" >> "${DISPLAY_MANAGER_CONFIG["gdm"]}\n"
     gdm_update
 }
 
@@ -462,13 +462,32 @@ command_gdm_cursor_wizard(){
     # 質問する
     local _input
     echo -n "(1 ~ ${#_cursor_theme_name[@]}) > "
-    read -n 1 _input
-    echo
-    if [[ -z "${_input+SET}" ]] || ! printf "${_input}" | grep -E "^[0-9]+$" >/dev/null 2>&1 || ! (( 1 <= _input <= ${#_cursor_theme_name[@]} )); then # 正しい値か確認
+    read _input
+
+    local _recall
+    _recall(){
         echo "Please enter the correct value."
-        exit 1
+        command_gdm_cursor_wizard
+        exit 0
+    }
+
+    # 回答を解析
+    if check_int "${_input}"; then
+        # 数字が入力された
+        if (( 1 <= _input)) && (( _input <= ${#_cursor_theme_name[@]} )); then
+            _cursor_theme="${_cursor_theme_name[$(( _input - 1 ))]}"
+        else
+            _recall
+        fi
+    else
+        # 文字が入力された
+        if printf "%s\n" "${_cursor_theme_name[@]}" | grep -x "${_input}" 1>/dev/null 2>&1; then
+            _gre_cursor_themeeter="${_input}"
+        else
+            _recall
+        fi
     fi
-    _cursor_theme="${_cursor_theme_name[$(( _input - 1 ))]}"
+
     if [[ -n "${_cursor_theme}" ]]; then
         gdm_set_config "org/gnome/desktop/interface" "cursor-theme" "${_cursor_theme}"
     else
