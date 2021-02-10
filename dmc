@@ -91,6 +91,16 @@ check_bool(){
     fi
 }
 
+# crudini ラッパー
+crudini(){
+    if which "crudini" >/dev/null 2>&1; then
+        $(which crudini) ${@}
+    else
+        msg_error "crudini was not found"
+        exit 1
+    fi
+}
+
 
 #== LightDM用の汎用関数 ==#
 # キーが設定されている設定ファイル
