@@ -37,16 +37,16 @@ script_usage(){
     echo "    sound [true or false]             Toggle the sound when an event occurs."
     echo
     echo " General option:"
-    echo "    -d | --display-manager            Specifiy the display manager"
+    echo "    -m | --mode                       Specifiy the target you want to set"
     echo "    -e | --editer                     Specifiy the editor to use for editing"
     echo "    -h | --help                       This help message and exit"
     echo "    --non-interactive                 Run in non-interactive mode"
     echo "    --noroot                          No check root permission"
     echo "    --write-all-files                 Allows rewriting of all configuration files"
     echo
-    echo " Supported display manager:"
-    echo "    lightdm"
-    echo "    gdm"
+    echo " Supported modes:"
+    echo "    Display managers: lightdm, gdm"
+    echo "    LightDM greeters: webkit2"
     echo
 }
 
@@ -108,11 +108,11 @@ lightdm_get_source_file(){
 
 # 設定ファイルの値を変更する
 lightdm_set_config(){
-    local key="${1}" value="${2}"
+    local key="${1}" value="${2}" file=${3-${LIGHTDM_CONFIG}}
     if [[ "${WRITE_ALL_FILES}" = true ]] && [[ -n "$(lightdm_get_source_file "${1}")" ]]; then
         crudini --set "$(lightdm_get_source_file "${1}")" 'Seat:*' "${1}" "${2}"
     else
-        crudini --set "${LIGHTDM_CONFIG}" 'Seat:*' "${1}" "${2}"
+        crudini --set "${file}" 'Seat:*' "${1}" "${2}"
     fi
 
     if [[ ! "$(lightdm_get_value "${1}")" = "${2}" ]]; then
