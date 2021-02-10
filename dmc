@@ -38,6 +38,7 @@ script_usage(){
     echo "    -h | --help                       This help message and exit"
     echo "    --non-interactive                 Run in non-interactive mode"
     echo "    --noroot                          No check root permission"
+    echo "    --write-all-files                 Allows rewriting of all configuration files"
     echo
     echo " Supported display manager:"
     echo "    lightdm"
@@ -103,7 +104,11 @@ lightdm_get_source_file(){
 # 設定ファイルの値を変更する
 lightdm_set_config(){
     local key="${1}" value="${2}"
-    crudini --set "${LIGHTDM_CONFIG}" 'Seat:*' "${1}" "${2}"
+    if [[ "${WRITE_ALL_FILES}" = true ]] && [[ -n "$(lightdm_get_source_file "${1}")" ]]; then
+            crudini --set "$(lightdm_get_source_file "${1}")" 'Seat:*' "${1}" "${2}"
+    else
+        crudini --set "${LIGHTDM_CONFIG}" 'Seat:*' "${1}" "${2}"
+    fi
 
     if [[ ! "$(lightdm_get_value "${1}")" = "${2}" ]]; then
         msg_error "Failed to change the setting value. A value has already been set for $(lightdm_get_source_file "${1}")"
@@ -518,6 +523,7 @@ USE_EDITOR="${EDITOR:-vi}"
 DISPLAY_MANAGER="lightdm"
 LIGHTDM_CONFIG="${DISPLAY_MANAGER_CONFIG["lightdm"]}"
 NON_INTERACTIVE=false
+WRITE_ALL_FILES=false
 NOROOT=false
 GREETERS_DIR="$(lightdm_get_value "greeters-directory")"
 : ${GREETERS_DIR:="/usr/share/xgreeters"} # デフォルト値を設定
@@ -537,7 +543,7 @@ LOADED_LIGHTDM_CONFIG=(
 # 引数を解析
 ARGUMENT="${@}"
 OPTS="d:e:h"
-OPTL="display-manager:,editor:,help,non-interactive,noroot"
+OPTL="display-manager:,editor:,help,non-interactive,noroot,write-all-files"
 OPT="$(getopt -o ${OPTS} -l ${OPTL} -- ${ARGUMENT})"
 (( ${?} != 0 )) && exit 1
 
@@ -564,6 +570,10 @@ while true; do
             ;;
         --noroot)
             NOROOT=true
+            shift 1
+            ;;
+        --write-all-files)
+            WRITE_ALL_FILES=true
             shift 1
             ;;
         --)
