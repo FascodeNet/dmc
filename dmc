@@ -36,9 +36,9 @@ script_usage(){
     echo "    -d | --display-manager            Specifiy the display manager"
     echo "    -e | --editer                     Specifiy the editor to use for editing"
     echo "    -h | --help                       This help message and exit"
-    echo "    --comment-replace                 Replace the commented out value."
     echo "    --non-interactive                 Run in non-interactive mode"
     echo "    --noroot                          No check root permission"
+    echo "    --write-all-files                 Allows rewriting of all configuration files"
     echo
     echo " Supported display manager:"
     echo "    lightdm"
@@ -86,10 +86,6 @@ check_bool(){
     fi
 }
 
-# 設定ファイルに書き込む
-write_config(){
-    echo "${@}" >> "${LIGHTDM_CONFIG}"
-}
 
 #== LightDM用の汎用関数 ==#
 # キーが設定されている設定ファイル
@@ -108,17 +104,10 @@ lightdm_get_source_file(){
 # 設定ファイルの値を変更する
 lightdm_set_config(){
     local key="${1}" value="${2}"
-    if [[ "${COMMENT_REPLACE}" = true ]]; then
-        if cat "${LIGHTDM_CONFIG}" | grep -E "^#? ?${key} ?=" > /dev/null; then
-            sed -i -r "s|^# ?${key} ?=.+|${key}=${value}|g" "${LIGHTDM_CONFIG}"
-        fi
-    fi
-
-    if cat "${LIGHTDM_CONFIG}" | grep -E "^ ?${key} ?=" > /dev/null; then
-        sed -i -r "s|^ ?${key} ?=.+|${key}=${value}|g" "${LIGHTDM_CONFIG}"
+    if [[ "${WRITE_ALL_FILES}" = true ]] && [[ -n "$(lightdm_get_source_file "${1}")" ]]; then
+        crudini --set "$(lightdm_get_source_file "${1}")" 'Seat:*' "${1}" "${2}"
     else
-        # 新しく設定を追記する
-        write_config "${1}=${2}"
+        crudini --set "${LIGHTDM_CONFIG}" 'Seat:*' "${1}" "${2}"
     fi
 
     if [[ ! "$(lightdm_get_value "${1}")" = "${2}" ]]; then
@@ -138,6 +127,7 @@ lightdm_remove_key(){
 
 # 設定ファイルを作成
 lightdm_init_configs(){
+    check_root
     if [[ ! -f "${LIGHTDM_CONFIG}" ]]; then
         mkdir -p "$(dirname "${LIGHTDM_CONFIG}")"
         touch "${LIGHTDM_CONFIG}"
@@ -428,7 +418,8 @@ gdm_init_configs(){
 # gdm_set_config <dconf path> <key> <value>
 gdm_set_config(){
     local _path="${1}" _key="${2}" _value="${3}"
-    echo -e "[${_path}]\n${_key}='$_value'\n" >> "${DISPLAY_MANAGER_CONFIG["gdm"]}"
+    #echo -e "[${_path}]\n${_key}='$_value'\n" >> "${DISPLAY_MANAGER_CONFIG["gdm"]}"
+    crudini --set "${1}" "${2}" "${3}"
     gdm_update
 }
 
@@ -532,8 +523,8 @@ declare -A DISPLAY_MANAGER_CONFIG=(
 USE_EDITOR="${EDITOR:-vi}"
 DISPLAY_MANAGER="lightdm"
 LIGHTDM_CONFIG="${DISPLAY_MANAGER_CONFIG["lightdm"]}"
-COMMENT_REPLACE=false
 NON_INTERACTIVE=false
+WRITE_ALL_FILES=false
 NOROOT=false
 GREETERS_DIR="$(lightdm_get_value "greeters-directory")"
 : ${GREETERS_DIR:="/usr/share/xgreeters"} # デフォルト値を設定
@@ -553,7 +544,7 @@ LOADED_LIGHTDM_CONFIG=(
 # 引数を解析
 ARGUMENT="${@}"
 OPTS="d:e:h"
-OPTL="display-manager:,editor:,help,comment-replace,non-interactive,noroot"
+OPTL="display-manager:,editor:,help,non-interactive,noroot,write-all-files"
 OPT="$(getopt -o ${OPTS} -l ${OPTL} -- ${ARGUMENT})"
 (( ${?} != 0 )) && exit 1
 
@@ -574,16 +565,16 @@ while true; do
             script_usage
             exit 0
             ;;
-        --comment-replace)
-            COMMENT_REPLACE=true
-            shift 1
-            ;;
         --non-interactive)
             NON_INTERACTIVE=true
             shift 1
             ;;
         --noroot)
             NOROOT=true
+            shift 1
+            ;;
+        --write-all-files)
+            WRITE_ALL_FILES=true
             shift 1
             ;;
         --)
@@ -605,22 +596,18 @@ case "${DISPLAY_MANAGER}" in
         case "${COMMAND}" in
             "autologin")
                 lightdm_init_configs
-                check_root
                 command_lightdm_auto_login ${COMMAND_ARGS}
                 ;;
             "greeter")
                 lightdm_init_configs
-                check_root
                 run_greeter_wizard
                 ;;
             "greeter-change")
                 lightdm_init_configs
-                check_root
                 command_lightdm_greeter_change ${COMMAND_ARGS}
                 ;;
             "greeter-create")
                 lightdm_init_configs
-                check_root
                 command_lightdm_greeter_create ${COMMAND_ARGS}
                 ;;
             "greeter-list")
