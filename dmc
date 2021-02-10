@@ -32,6 +32,10 @@ script_usage(){
     echo "    edit                              Edit lightdm config"
     echo "    show-config                       Show current settings"
     echo
+    echo " GDM command:"
+    echo "    cursor                            Toggle the cursor theme"
+    echo "    sound [true or false]             Toggle the sound when an event occurs."
+    echo
     echo " General option:"
     echo "    -d | --display-manager            Specifiy the display manager"
     echo "    -e | --editer                     Specifiy the editor to use for editing"
@@ -42,6 +46,7 @@ script_usage(){
     echo
     echo " Supported display manager:"
     echo "    lightdm"
+    echo "    gdm"
     echo
 }
 
