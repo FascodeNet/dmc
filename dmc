@@ -85,10 +85,6 @@ check_bool(){
     fi
 }
 
-# 設定ファイルに書き込む
-write_config(){
-    echo "${@}" >> "${LIGHTDM_CONFIG}"
-}
 
 #== LightDM用の汎用関数 ==#
 # キーが設定されている設定ファイル
@@ -107,18 +103,7 @@ lightdm_get_source_file(){
 # 設定ファイルの値を変更する
 lightdm_set_config(){
     local key="${1}" value="${2}"
-    if [[ "${COMMENT_REPLACE}" = true ]]; then
-        if cat "${LIGHTDM_CONFIG}" | grep -E "^#? ?${key} ?=" > /dev/null; then
-            sed -i -r "s|^# ?${key} ?=.+|${key}=${value}|g" "${LIGHTDM_CONFIG}"
-        fi
-    fi
-
-    if cat "${LIGHTDM_CONFIG}" | grep -E "^ ?${key} ?=" > /dev/null; then
-        sed -i -r "s|^ ?${key} ?=.+|${key}=${value}|g" "${LIGHTDM_CONFIG}"
-    else
-        # 新しく設定を追記する
-        write_config "${1}=${2}"
-    fi
+    crudini --set "${LIGHTDM_CONFIG}" 'Seat:*' "${1}" "${2}"
 
     if [[ ! "$(lightdm_get_value "${1}")" = "${2}" ]]; then
         msg_error "Failed to change the setting value. A value has already been set for $(lightdm_get_source_file "${1}")"
@@ -427,7 +412,8 @@ gdm_init_configs(){
 # gdm_set_config <dconf path> <key> <value>
 gdm_set_config(){
     local _path="${1}" _key="${2}" _value="${3}"
-    echo -e "[${_path}]\n${_key}='$_value'\n" >> "${DISPLAY_MANAGER_CONFIG["gdm"]}"
+    #echo -e "[${_path}]\n${_key}='$_value'\n" >> "${DISPLAY_MANAGER_CONFIG["gdm"]}"
+    crudini --set "${1}" "${2}" "${3}"
     gdm_update
 }
 
