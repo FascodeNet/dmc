@@ -423,8 +423,12 @@ gdm_init_configs(){
 # gdm_set_config <dconf path> <key> <value>
 gdm_set_config(){
     local _path="${1}" _key="${2}" _value="${3}"
-    #echo -e "[${_path}]\n${_key}='$_value'\n" >> "${DISPLAY_MANAGER_CONFIG["gdm"]}"
-    crudini --set "${1}" "${2}" "${3}"
+    
+    if check_int "${3}" || check_bool "${3}"; then
+        crudini --set "${DISPLAY_MANAGER_CONFIG["gdm"]}" "${1}" "${2}" "${3}"
+    else
+        crudini --set "${DISPLAY_MANAGER_CONFIG["gdm"]}" "${1}" "${2}" "\"${3}\""
+    fi
     gdm_update
 }
 
@@ -548,8 +552,8 @@ LOADED_LIGHTDM_CONFIG=(
 
 # 引数を解析
 ARGUMENT="${@}"
-OPTS="d:e:h"
-OPTL="display-manager:,editor:,help,non-interactive,noroot,write-all-files"
+OPTS="m:e:h"
+OPTL="mode:,editor:,help,non-interactive,noroot,write-all-files"
 OPT="$(getopt -o ${OPTS} -l ${OPTL} -- ${ARGUMENT})"
 (( ${?} != 0 )) && exit 1
 
@@ -558,7 +562,7 @@ unset OPT OPTS OPTL
 
 while true; do
     case "${1}" in
-        -d | --display-manager)
+        -m | --mode)
             DISPLAY_MANAGER="${2}"
             shift 2
             ;;
