@@ -36,7 +36,6 @@ script_usage(){
     echo "    -d | --display-manager            Specifiy the display manager"
     echo "    -e | --editer                     Specifiy the editor to use for editing"
     echo "    -h | --help                       This help message and exit"
-    echo "    --comment-replace                 Replace the commented out value."
     echo "    --non-interactive                 Run in non-interactive mode"
     echo "    --noroot                          No check root permission"
     echo
@@ -532,7 +531,6 @@ declare -A DISPLAY_MANAGER_CONFIG=(
 USE_EDITOR="${EDITOR:-vi}"
 DISPLAY_MANAGER="lightdm"
 LIGHTDM_CONFIG="${DISPLAY_MANAGER_CONFIG["lightdm"]}"
-COMMENT_REPLACE=false
 NON_INTERACTIVE=false
 NOROOT=false
 GREETERS_DIR="$(lightdm_get_value "greeters-directory")"
@@ -553,7 +551,7 @@ LOADED_LIGHTDM_CONFIG=(
 # 引数を解析
 ARGUMENT="${@}"
 OPTS="d:e:h"
-OPTL="display-manager:,editor:,help,comment-replace,non-interactive,noroot"
+OPTL="display-manager:,editor:,help,non-interactive,noroot"
 OPT="$(getopt -o ${OPTS} -l ${OPTL} -- ${ARGUMENT})"
 (( ${?} != 0 )) && exit 1
 
@@ -573,10 +571,6 @@ while true; do
         -h | --help)
             script_usage
             exit 0
-            ;;
-        --comment-replace)
-            COMMENT_REPLACE=true
-            shift 1
             ;;
         --non-interactive)
             NON_INTERACTIVE=true
