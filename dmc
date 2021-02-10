@@ -105,7 +105,7 @@ lightdm_get_source_file(){
 lightdm_set_config(){
     local key="${1}" value="${2}"
     if [[ "${WRITE_ALL_FILES}" = true ]] && [[ -n "$(lightdm_get_source_file "${1}")" ]]; then
-            crudini --set "$(lightdm_get_source_file "${1}")" 'Seat:*' "${1}" "${2}"
+        crudini --set "$(lightdm_get_source_file "${1}")" 'Seat:*' "${1}" "${2}"
     else
         crudini --set "${LIGHTDM_CONFIG}" 'Seat:*' "${1}" "${2}"
     fi
@@ -127,6 +127,7 @@ lightdm_remove_key(){
 
 # 設定ファイルを作成
 lightdm_init_configs(){
+    check_root
     if [[ ! -f "${LIGHTDM_CONFIG}" ]]; then
         mkdir -p "$(dirname "${LIGHTDM_CONFIG}")"
         touch "${LIGHTDM_CONFIG}"
@@ -595,22 +596,18 @@ case "${DISPLAY_MANAGER}" in
         case "${COMMAND}" in
             "autologin")
                 lightdm_init_configs
-                check_root
                 command_lightdm_auto_login ${COMMAND_ARGS}
                 ;;
             "greeter")
                 lightdm_init_configs
-                check_root
                 run_greeter_wizard
                 ;;
             "greeter-change")
                 lightdm_init_configs
-                check_root
                 command_lightdm_greeter_change ${COMMAND_ARGS}
                 ;;
             "greeter-create")
                 lightdm_init_configs
-                check_root
                 command_lightdm_greeter_create ${COMMAND_ARGS}
                 ;;
             "greeter-list")
