@@ -34,11 +34,15 @@ script_usage(){
     echo
     echo " GDM command:"
     echo "    cursor                            Run cursor selection wizard"
-    echo "    sound [true or false]             Toggle the sound when an event occurs."
+    echo "    sound [true or false]             Toggle the sound when an event occurs"
+    echo "    logo [image]                      Specify the logo of the login screen"
     echo
     echo " Webkit2 command:"
     echo "    theme                             Run theme selection wizard"
     #echo "    theme-change                      "
+    echo
+    echo " Qtquick command:"
+    echo "    back                              Specify the background image"
     echo
     echo " General option:"
     echo "    -m | --mode                       Specifiy the target you want to set"
@@ -50,7 +54,7 @@ script_usage(){
     echo
     echo " Supported modes:"
     echo "    Display managers: lightdm, gdm"
-    echo "    LightDM greeters: webkit2"
+    echo "    LightDM greeters: webkit2, qtquick"
     echo
 }
 
