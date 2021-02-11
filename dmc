@@ -39,7 +39,7 @@ script_usage(){
     echo
     echo " Webkit2 command:"
     echo "    theme                             Run theme selection wizard"
-    #echo "    theme-change                      "
+    echo "    theme-change [theme]              Specify the theme"
     echo
     echo " Qtquick command:"
     echo "    back                              Specify the background image"
@@ -625,12 +625,26 @@ command_webkit2_theme_wizard(){
     fi
 
     if [[ -n "${_theme}" ]]; then
-        webkit2_set_config "greeter" "webkit_theme" "${_theme}"
+        command_webkit2_theme_change "${_theme}"
+        echo "Changed the theme to ${_theme}"
     else
         command_webkit2_theme_wizard
         exit 0
     fi
-    echo "Changed the theme to ${_theme}"
+    
+}
+
+command_webkit2_theme_change(){
+    if [[ -z "${1+SET}" ]]; then
+        msg_error "Please specify the theme name"
+        exit 1
+    fi
+    if [[ ! -d "/usr/share/lightdm-webkit/themes/${1}" ]]; then
+        msg_error "The specified theme (${1}) does not exist"
+        exit 1
+    fi
+
+    webkit2_set_config "greeter" "webkit_theme" "${1}"
 }
 
 #== Qtquick用の汎用関数 ==#
@@ -837,6 +851,11 @@ case "${DISPLAY_MANAGER}" in
                 check_root
                 webkit2_init_configs
                 command_webkit2_theme_wizard
+                ;;
+            "theme-change")
+                check_root
+                webkit2_init_configs
+                command_webkit2_theme_change ${COMMAND_ARGS}
                 ;;
             *)
                 msg_error "Undefined commnad(${COMMAND})"
