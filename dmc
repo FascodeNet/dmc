@@ -358,11 +358,11 @@ command_lightdm_auto_login(){
         # 既に自動ログインが設定されているかを確認
         local autologin_user="$(lightdm_get_value autologin-user)"
         if [[ -n "${autologin_user}" ]]; then
-        # autologinを無効化
-        for _autologin in "autologin-guest" "autologin-user" "autologin-user-timeout" "autologin-in-background" "autologin-session"; do
-            remove_key "${_autologin}"
-        done
-        echo "Canceled automatic login of ${autologin_user}"
+            # autologinを無効化
+            for _autologin in "autologin-guest" "autologin-user" "autologin-user-timeout" "autologin-in-background" "autologin-session"; do
+                remove_key "${_autologin}"
+            done
+            echo "Canceled automatic login of ${autologin_user}"
         fi
     else
         local autologin_user="${1}" autologin_session
@@ -438,6 +438,7 @@ command_lightdm_show_config(){
 
 #== GDM用の汎用関数 ==#
 gdm_init_configs(){
+    check_root
     if [[ ! -f "/etc/dconf/profile/gdm" ]]; then
         mkdir -p "/etc/dconf/profile"
         touch "/etc/dconf/profile/gdm"
@@ -672,6 +673,7 @@ command_gdm_auto_login(){
 
 #== Webkit2用の汎用関数 ==#
 webkit2_init_configs(){
+    check_root
     if [[ ! -f "${GREETER_CONFIG["lightdm-webkit2-greeter"]}" ]]; then
         mkdir -p "$(dirname "${GREETER_CONFIG["lightdm-webkit2-greeter"]}")"
         touch "${GREETER_CONFIG["lightdm-webkit2-greeter"]}"
@@ -758,6 +760,7 @@ command_webkit2_theme_change(){
 
 #== Qtquick用の汎用関数 ==#
 qtquick_init_configs(){
+    check_root
     if [[ ! -f "${GREETER_CONFIG["lightdm-qtquick-greeter"]}" ]] || [[ -z "$(cat "${GREETER_CONFIG["lightdm-qtquick-greeter"]}")" ]]; then
         mkdir -p "$(dirname "${GREETER_CONFIG["lightdm-qtquick-greeter"]}")"
         touch "${GREETER_CONFIG["lightdm-qtquick-greeter"]}"
@@ -935,23 +938,23 @@ case "${DISPLAY_MANAGER}" in
         ;;
     "gdm")
         case "${COMMAND}" in
+            "autologin")
+                gdm_init_configs
+                command_gdm_auto_login
+                ;;
             "cursor")
-                check_root
                 gdm_init_configs
                 command_gdm_cursor_wizard
                 ;;
             "sound")
-                check_root
                 gdm_init_configs
                 command_gdm_sound ${COMMAND_ARGS}
                 ;;
             "logo")
-                check_root
                 gdm_init_configs
                 command_gdm_logo ${COMMAND_ARGS}
                 ;;
             "tap")
-                check_root
                 gdm_init_configs
                 command_gdm_tap ${COMMAND_ARGS}
                 ;;
@@ -963,12 +966,10 @@ case "${DISPLAY_MANAGER}" in
     "webkit2")
         case "${COMMAND}" in
             "theme")
-                check_root
                 webkit2_init_configs
                 command_webkit2_theme_wizard
                 ;;
             "theme-change")
-                check_root
                 webkit2_init_configs
                 command_webkit2_theme_change ${COMMAND_ARGS}
                 ;;
@@ -980,7 +981,6 @@ case "${DISPLAY_MANAGER}" in
     "qtquick")
         case "${COMMAND}" in
             "back")
-                check_root
                 qtquick_init_configs
                 command_qtquick_back ${COMMAND_ARGS}
                 ;;
