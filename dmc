@@ -462,6 +462,24 @@ gdm_update(){
 
 
 #== GDM用コマンド ==#
+command_gdm_logo(){
+    if [[ -z "${1+SET}" ]]; then
+        msg_error "Please specify the image of background"
+        exit 1
+    fi
+    if [[ ! -f "${1}" ]]; then
+        msg_error "${1} was not found."
+        exit 1
+    fi
+
+    local _backgrounf_file="/usr/share/backgrounds/gdm/background"
+    mkdir -p "$(dirname "${_backgrounf_file}")"
+    cp "${1}" "${_backgrounf_file}"
+    chmod 644 "${_backgrounf_file}"
+    
+    gdm_set_config "org/gnome/login-screen" "logo" "${_backgrounf_file}"
+}
+
 command_gdm_cursor_wizard(){
     # カーソルテーマの一覧を取得
     # 参考: https://wiki.archlinux.jp/index.php/%E3%82%AB%E3%83%BC%E3%82%BD%E3%83%AB%E3%83%86%E3%83%BC%E3%83%9E
@@ -617,8 +635,8 @@ qtquick_init_configs(){
         mkdir -p "$(dirname "${GREETER_CONFIG["lightdm-qtquick-greeter"]}")"
         touch "${GREETER_CONFIG["lightdm-qtquick-greeter"]}"
         #echo -e "{\n\n}\n" > "${GREETER_CONFIG["lightdm-qtquick-greeter"]}"
-        qtquick_set_value background_path "file:///hoge/fuga.png"
-        qtquick_set_value theme "qrc:/Login.qml"
+        qtquick_set_config background_path "file:///hoge/fuga.png"
+        qtquick_set_config theme "qrc:/Login.qml"
     fi
 }
 
@@ -628,7 +646,7 @@ qtquick_get_value(){
 }
 
 # command_qtquick_back <key> <value>
-qtquick_set_value(){
+qtquick_set_config(){
     local _tempfile="/tmp/$(basename "${GREETER_CONFIG["lightdm-qtquick-greeter"]}")-$(cat /dev/urandom | base64 | fold -w 10 | head -n 1)"
     cp "${GREETER_CONFIG["lightdm-qtquick-greeter"]}" "${_tempfile}"
     cat "${_tempfile}" | jq -r ".${1}|=\"${2}\"" > "${GREETER_CONFIG["lightdm-qtquick-greeter"]}"
@@ -651,7 +669,7 @@ command_qtquick_back(){
     cp "${1}" "${_backgrounf_file}"
     chmod 644 "${_backgrounf_file}"
     
-    qtquick_set_value "background_path" "file://${_backgrounf_file}"
+    qtquick_set_config "background_path" "file://${_backgrounf_file}"
 }
 
 
@@ -798,6 +816,11 @@ case "${DISPLAY_MANAGER}" in
                 check_root
                 gdm_init_configs
                 command_gdm_sound ${COMMAND_ARGS}
+                ;;
+            "logo")
+                check_root
+                gdm_init_configs
+                command_gdm_logo ${COMMAND_ARGS}
                 ;;
             *)
                 msg_error "Undefined commnad(${COMMAND})"
