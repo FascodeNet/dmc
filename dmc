@@ -96,13 +96,23 @@ check_bool(){
 }
 
 # crudini ラッパー
-crudini(){
-    if which "crudini" >/dev/null 2>&1; then
-        $(which crudini) ${@}
+wrapper(){
+    local _command="${1}"
+    shift 1
+    if which "${_command}" >/dev/null 2>&1; then
+        $(which "${_command}") ${@}
     else
-        msg_error "crudini was not found"
+        msg_error "${_command} was not found"
         exit 1
     fi
+}
+
+crudini(){
+    wrapper crudini ${@}
+}
+
+jq(){
+    wrapper jq ${@}
 }
 
 
@@ -601,6 +611,50 @@ command_webkit2_theme_wizard(){
     echo "Changed the theme to ${_theme}"
 }
 
+#== Qtquick用の汎用関数 ==#
+qtquick_init_configs(){
+    if [[ ! -f "${GREETER_CONFIG["lightdm-qtquick-greeter"]}" ]] || [[ -z "$(cat "${GREETER_CONFIG["lightdm-qtquick-greeter"]}")" ]]; then
+        mkdir -p "$(dirname "${GREETER_CONFIG["lightdm-qtquick-greeter"]}")"
+        touch "${GREETER_CONFIG["lightdm-qtquick-greeter"]}"
+        #echo -e "{\n\n}\n" > "${GREETER_CONFIG["lightdm-qtquick-greeter"]}"
+        qtquick_set_value background_path "file:///hoge/fuga.png"
+        qtquick_set_value theme "qrc:/Login.qml"
+    fi
+}
+
+#qtquick_get_value <key>
+qtquick_get_value(){
+    cat "${GREETER_CONFIG["lightdm-qtquick-greeter"]}" | jq ".${1}"
+}
+
+# command_qtquick_back <key> <value>
+qtquick_set_value(){
+    local _tempfile="/tmp/$(basename "${GREETER_CONFIG["lightdm-qtquick-greeter"]}")-$(cat /dev/urandom | base64 | fold -w 10 | head -n 1)"
+    cp "${GREETER_CONFIG["lightdm-qtquick-greeter"]}" "${_tempfile}"
+    cat "${_tempfile}" | jq -r ".${1}|=\"${2}\"" > "${GREETER_CONFIG["lightdm-qtquick-greeter"]}"
+    chmod 644 "${GREETER_CONFIG["lightdm-qtquick-greeter"]}"
+}
+
+#== Qtquick用コマンド ==#
+command_qtquick_back(){
+    if [[ -z "${1+SET}" ]]; then
+        msg_error "Please specify the image of background"
+        exit 1
+    fi
+    if [[ ! -f "${1}" ]]; then
+        msg_error "${1} was not found."
+        exit 1
+    fi
+
+    local _backgrounf_file="/usr/share/backgrounds/lightdm/qtquick-greeter"
+    mkdir -p "$(dirname "${_backgrounf_file}")"
+    cp "${1}" "${_backgrounf_file}"
+    chmod 644 "${_backgrounf_file}"
+    
+    qtquick_set_value "background_path" "file://${_backgrounf_file}"
+}
+
+
 # 変数を設定
 declare -A GREETER_CONFIG=(
     ["lightdm-webkit2-greeter"]="/etc/lightdm/lightdm-webkit2-greeter.conf"
@@ -608,6 +662,7 @@ declare -A GREETER_CONFIG=(
     ["lightdm-gtk-greeter"]="/etc/lightdm/lightdm-gtk-greeter.conf"
     ["io.elementary.greeter"]="/etc/lightdm/io.elementary.greeter.conf"
     ["lightdm-mini-greeter"]="/etc/lightdm/lightdm-mini-greeter.conf"
+    ["lightdm-qtquick-greeter"]="/etc/lightdm/lightdm-qtquick-greeter.json"
 )
 
 declare -A DISPLAY_MANAGER_CONFIG=(
@@ -758,6 +813,15 @@ case "${DISPLAY_MANAGER}" in
                 ;;
             *)
                 msg_error "Undefined commnad(${COMMAND})"
+                ;;
+        esac
+        ;;
+    "qtquick")
+        case "${COMMAND}" in
+            "back")
+                check_root
+                qtquick_init_configs
+                command_qtquick_back ${COMMAND_ARGS}
                 ;;
         esac
         ;;
