@@ -443,20 +443,42 @@ gdm_init_configs(){
         touch "/etc/dconf/profile/gdm"
         echo -e "user-db:user\nsystem-db:gdm\nfile-db:/usr/share/gdm/greeter-dconf-defaults" > "/etc/dconf/profile/gdm"
     fi
-    if [[ ! -f "${DISPLAY_MANAGER_CONFIG["gdm"]}" ]]; then
-        mkdir -p "$(dirname "${DISPLAY_MANAGER_CONFIG["gdm"]}")"
-        touch "${DISPLAY_MANAGER_CONFIG["gdm"]}"
-    fi
+
+    local _file
+    for _file in "${DISPLAY_MANAGER_CONFIG["gdm-dconf"]}" "${DISPLAY_MANAGER_CONFIG["gdm-custom"]}"; do
+        if [[ ! -f "${_file}" ]]; then
+            mkdir -p "$(dirname "${_file}")"
+            touch "${_file}"
+        fi
+    done
 }
 
-# gdm_set_config <dconf path> <key> <value>
-gdm_set_config(){
-    local _path="${1}" _key="${2}" _value="${3}"
-    
+# gdm_dconf_set_config <dconf path> <key> <value>
+gdm_dconf_set_config(){
     if check_int "${3}" || check_bool "${3}"; then
-        crudini --set "${DISPLAY_MANAGER_CONFIG["gdm"]}" "${1}" "${2}" "${3}"
+        crudini --set "${DISPLAY_MANAGER_CONFIG["gdm-dconf"]}" "${1}" "${2}" "${3}"
     else
-        crudini --set "${DISPLAY_MANAGER_CONFIG["gdm"]}" "${1}" "${2}" "\"${3}\""
+        crudini --set "${DISPLAY_MANAGER_CONFIG["gdm-dconf"]}" "${1}" "${2}" "\"${3}\""
+    fi
+    gdm_update
+}
+
+# gdm_dconf_get_value <dconf path> <key>
+gdm_dconf_get_value(){
+    dconf dump / | crudini --get - "${1}" "${2}"
+}
+
+# gdm_custom_get_value <section> <key>
+gdm_custom_get_value(){
+    crudini --get "${DISPLAY_MANAGER_CONFIG["gdm-custom"]}" "${1}" "${2}"
+}
+
+# gdm_custom_set_config <section> <key> <value>
+gdm_custom_set_config(){
+    if check_int "${3}" || check_bool "${3}"; then
+        crudini --set "${DISPLAY_MANAGER_CONFIG["gdm-custom"]}" "${1}" "${2}" "${3}"
+    else
+        crudini --set "${DISPLAY_MANAGER_CONFIG["gdm-custom"]}" "${1}" "${2}" "\"${3}\""
     fi
     gdm_update
 }
@@ -482,7 +504,7 @@ command_gdm_logo(){
     cp "${1}" "${_backgrounf_file}"
     chmod 644 "${_backgrounf_file}"
     
-    gdm_set_config "org/gnome/login-screen" "logo" "${_backgrounf_file}"
+    gdm_dconf_set_config "org/gnome/login-screen" "logo" "${_backgrounf_file}"
 }
 
 command_gdm_cursor_wizard(){
@@ -544,7 +566,7 @@ command_gdm_cursor_wizard(){
     fi
 
     if [[ -n "${_cursor_theme}" ]]; then
-        gdm_set_config "org/gnome/desktop/interface" "cursor-theme" "${_cursor_theme}"
+        gdm_dconf_set_config "org/gnome/desktop/interface" "cursor-theme" "${_cursor_theme}"
     else
         command_gdm_cursor_wizard
         exit 0
@@ -559,7 +581,7 @@ command_gdm_sound(){
         script_usage
         exit 1
     fi
-    gdm_set_config "org/gnome/desktop/sound" "event-sounds" "${1}"
+    gdm_dconf_set_config "org/gnome/desktop/sound" "event-sounds" "${1}"
 }
 
 command_gdm_tap(){
@@ -568,7 +590,84 @@ command_gdm_tap(){
         script_usage
         exit 1
     fi
-    gdm_set_config "org/gnome/desktop/peripherals/touchpad" "tap-to-click" "${1}"
+    gdm_dconf_set_config "org/gnome/desktop/peripherals/touchpad" "tap-to-click" "${1}"
+}
+
+# autologin
+command_gdm_auto_login(){
+    if [[ -z "${1+SET}" ]]; then
+        # 既に自動ログインが設定されているかを確認
+        local autologin="$(gdm_custom_get_value daemon AutomaticLoginEnable)"
+        if [[ "${autologin}" = "True" ]]; then
+            gdm_custom_set_config "daemon" "AutomaticLoginEnable" "False"
+            echo "Canceled automatic login of $(gdm_custom_get_value "daemon" "AutomaticLogin")"
+        fi
+    else
+        local autologin_user="${1}" autologin_session
+        if [[ -v 2 ]]; then
+            autologin_session="${2}"
+        fi
+
+        # ユーザーチェック
+        if ! getent passwd "${autologin_user}" 1> /dev/null 2>&1; then
+            echo "${autologin_user} is a non-existent user."
+            exit 1
+        fi
+
+        # セッションを設定 (WayLandのセッションは現在サポートされていません)
+        if [[ -z "${autologin_session+SET}" ]]; then
+            if (( $(ls "/usr/share/xsessions" 2> /dev/null | wc -l) <= 1 )); then
+                autologin_session="$(ls "/usr/share/xsessions" | sed 's|.desktop$||g')"
+            elif [[ "${NON_INTERACTIVE}" = true ]]; then
+                # 非対話モード
+                # ~/.dmrcの値を設定します
+                autologin_session="$(cat "${HOME}/.dmrc" | grep -E '^Session=' | cut -d '=' -f 2)"
+                if [[ -z "${autologin_session}" ]]; then
+                    msg_error "Failed to set the session."
+                    msg_error "Not specified and ~/.dmrc does not exist either."
+                    exit 1
+                fi
+            else
+                echo "Select the desktop session to autologin"
+                local session
+                for session in "/usr/share/xsessions/"*; do
+                    echo "   ${session}"
+                done
+                echo -n "(session name) > "
+                read session
+                if [[ -f "/usr/share/xsessions/${session}.desktop" ]]; then
+                    autologin_session="${session}"
+                else
+                    msg_error "Please enter the correct session name."
+                    exit 1
+                fi
+            fi
+        else
+            # 既に値が設定済み
+            if [[ ! -f "/usr/share/xsessions/${autologin_session}.desktop" ]]; then
+                # 存在しないセッションが指定された場合
+                msg_error "This is a session (${autologin_session}) that does not exist."
+                exit 1
+            fi
+        fi
+
+        # autologin グループを設定
+        if ! getent group "autologin" 1> /dev/null 2>&1; then
+            LANG=C groupadd -r "autologin"
+        fi
+        LANG=C gpasswd -a "${autologin_user}" "autologin"
+
+        # 設定を書き込み
+        gdm_custom_set_config "daemon" "AutomaticLoginEnable" "True"
+        gdm_custom_set_config "daemon" "AutomaticLogin" "${autologin_user}"
+        
+        # セッションを指定
+        crudini --set "/var/lib/AccountsService/users/${autologin_user}" "User" "Session" "${autologin_session}"
+        crudini --set "/var/lib/AccountsService/users/${autologin_user}" "User" "XSession" "${autologin_session}"
+
+        echo "${autologin_user} will automatically log in with ${autologin_session}"
+    fi
+
 }
 
 #== Webkit2用の汎用関数 ==#
@@ -713,7 +812,8 @@ declare -A GREETER_CONFIG=(
 
 declare -A DISPLAY_MANAGER_CONFIG=(
     ["lightdm"]="/etc/lightdm/lightdm.conf.d/00-dmc-lightdm.conf"
-    ["gdm"]="/etc/dconf/db/gdm.d/00-dmc-gdm"
+    ["gdm-dconf"]="/etc/dconf/db/gdm.d/00-dmc-gdm"
+    ["gdm-custom"]="/etc/gdm/custom.conf"
 )
 
 USE_EDITOR="${EDITOR:-vi}"
