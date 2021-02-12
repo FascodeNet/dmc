@@ -632,7 +632,7 @@ command_gdm_auto_login(){
                 echo "Select the desktop session to autologin"
                 local session
                 for session in "/usr/share/xsessions/"*; do
-                    echo "   ${session}"
+                    echo "   $(basename ${session} | sed "s|.desktop$||g")"
                 done
                 echo -n "(session name) > "
                 read session
