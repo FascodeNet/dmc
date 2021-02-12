@@ -944,7 +944,7 @@ case "${DISPLAY_MANAGER}" in
         case "${COMMAND}" in
             "autologin")
                 gdm_init_configs
-                command_gdm_auto_login
+                command_gdm_auto_login ${COMMAND_ARGS}
                 ;;
             "cursor")
                 gdm_init_configs
