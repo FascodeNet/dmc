@@ -827,7 +827,11 @@ WRITE_ALL_FILES=false
 NOROOT=false
 GREETERS_DIR="$(lightdm_get_value "greeters-directory")"
 : ${GREETERS_DIR:="/usr/share/xgreeters"} # デフォルト値を設定
-GREETERS=($(ls "${GREETERS_DIR}" | sed "s|.desktop$||g"))
+if [[ -d "${GREETERS_DIR}" ]]; then
+    GREETERS=($(ls "${GREETERS_DIR}" | sed "s|.desktop$||g"))
+else
+    GREETERS=()
+fi
 CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" | cut -d "=" -f 2)"
 : ${CURRENT_GREETER:="lightdm-gtk-greeter"}
 LOADED_LIGHTDM_CONFIG=(
