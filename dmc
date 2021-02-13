@@ -88,7 +88,7 @@ check_root(){
 check_int(){
     set +e
     #if (( "$(expr "${1}" + 1 >/dev/null 2>&1; printf "${?}")" < 2 )); then
-    if printf "${1}" | grep -E "^[0-9]+$" 1>/dev/null 2>&1; then
+    if printf "%s" "${1}" | grep -E "^[0-9]+$" 1>/dev/null 2>&1; then
         set -e
         return 0
     else
