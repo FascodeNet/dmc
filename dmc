@@ -878,14 +878,14 @@ LIGHTDM_CONFIG="${DISPLAY_MANAGER_CONFIG["lightdm"]}"
 
 # LightDM - Greeterのディレクトリ
 LIGHTDM_GREETERS_DIR="$(lightdm_get_value "greeters-directory")"
-: ${LIGHTDM_GREETERS_DIR:="/usr/share/xgreeters"}
+: "${LIGHTDM_GREETERS_DIR:="/usr/share/xgreeters"}"
 
 # LightDM - Greeter一覧
 LIGHTDM_GREETERS=( $( (ls "${LIGHTDM_GREETERS_DIR}" | sed "s|.desktop$||g") 2> /dev/null ))
 
 # LightDM - 現在設定されているGreeter
 LIGHTDM_CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" | cut -d "=" -f 2)"
-: ${LIGHTDM_CURRENT_GREETER:="lightdm-gtk-greeter"}
+: "${LIGHTDM_CURRENT_GREETER:="lightdm-gtk-greeter"}"
 
 # LightDM - 読み込まれた設定ファイルの一覧
 LIGHTDM_LOADED_CONFIG=()
