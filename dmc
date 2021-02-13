@@ -177,9 +177,11 @@ get_gtk_theme(){
     printf "%s\n" "${_gtk_theme_name_list[@]}" | sort | uniq | tr "\n" " "
 }
 
-#get_gtk_theme
-get_cursor_theme
-exit 0
+# 質問を行う関数
+ask_question(){
+    local _choice=("${@}")
+    
+}
 
 #== LightDM用の汎用関数 ==#
 # キーが設定されている設定ファイル
@@ -575,19 +577,23 @@ command_gdm_logo(){
 }
 
 command_gdm_cursor_wizard(){
+    # カーソル一覧を取得
+    local cursor_themes
+    while read -r line; do cursor_themes+=("${line}"); done < <(get_cursor_theme)
+
     # 一覧を生成
     local _c
     unset _cursor_theme
     echo "Please select the cursor theme to use."
-    for (( _c=1; _c<=${#CURSOR_THEMES[@]}; _c++)); do
-        _cursor_theme="${CURSOR_THEMES[$(( _c - 1 ))]}"
+    for (( _c=1; _c<=${#cursor_themes[@]}; _c++)); do
+        _cursor_theme="${cursor_themes[$(( _c - 1 ))]}"
         echo "   ${_c}: ${_cursor_theme}"
         unset _cursor_theme
     done
 
     # 質問する
     local _input
-    echo -n "(1 ~ ${#CURSOR_THEMES[@]}) > "
+    echo -n "(1 ~ ${#cursor_themes[@]}) > "
     read -r _input
 
     local _recall
@@ -600,14 +606,14 @@ command_gdm_cursor_wizard(){
     # 回答を解析
     if check_int "${_input}"; then
         # 数字が入力された
-        if (( 1 <= _input)) && (( _input <= ${#CURSOR_THEMES[@]} )); then
-            _cursor_theme="${CURSOR_THEMES[$(( _input - 1 ))]}"
+        if (( 1 <= _input)) && (( _input <= ${#cursor_themes[@]} )); then
+            _cursor_theme="${cursor_themes[$(( _input - 1 ))]}"
         else
             _recall
         fi
     else
         # 文字が入力された
-        if printf "%s\n" "${CURSOR_THEMES[@]}" | grep -x "${_input}" 1>/dev/null 2>&1; then
+        if printf "%s\n" "${cursor_themes[@]}" | grep -x "${_input}" 1>/dev/null 2>&1; then
             _cursor_theme="${_input}"
         else
             _recall
@@ -628,7 +634,9 @@ command_gdm_cursor_change(){
         msg_error "Please specify the cursor theme"
         exit 1
     fi
-    if ! printf "%s\n" "${CURSOR_THEMES[@]}" | grep -x "${1}" 1>/dev/null 2>&1; then
+    local cursor_themes
+    while read -r line; do cursor_themes+=("${line}"); done < <(get_cursor_theme)
+    if ! printf "%s\n" "${cursor_themes[@]}" | grep -x "${1}" 1>/dev/null 2>&1; then
         msg_error "The cursor theme (${1}) was not found"
         exit 1
     fi
@@ -939,7 +947,10 @@ command_slick_back(){
 
 
 command_slick_theme_wizard(){
-    :
+    local gtk_themes
+    while read -r line; do gtk_themes+=("${line}"); done < <(get_gtk_theme)
+
+
 }
 
 
@@ -980,9 +991,6 @@ LIGHTDM_CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" |
 while read -r line; do
     LIGHTDM_LOADED_CONFIG+=("${line}")
 done < <(printf "%s\n" "$(lightdm --show-config 2>&1 | grep -x -A "$(lightdm --show-config 2>&1 | wc -l)" "Sources:" | grep -v "Sources" | sed 's|^[A-Z]  ||g')"  | tr -d " ")
-
-# Global - カーソルテーマの一覧
-while read -r line; do CURSOR_THEMES+=("${line}"); done < <(get_cursor_theme)
 
 # Global - エディタ
 USE_EDITOR="${EDITOR:-vi}"
