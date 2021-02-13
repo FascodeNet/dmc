@@ -888,16 +888,10 @@ LIGHTDM_CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" |
 : ${LIGHTDM_CURRENT_GREETER:="lightdm-gtk-greeter"}
 
 # LightDM - 読み込まれた設定ファイルの一覧
-LIGHTDM_LOADED_CONFIG=(
-    $(
-        printf "%s\n" $(
-        lightdm --show-config 2>&1 | \
-            grep -x -A "$(lightdm --show-config 2>&1 | wc -l)" "Sources:" | \
-            grep -v "Sources") | \
-            sed -E "s|^[A-Z]$||g"
-    )
-)
-
+LIGHTDM_LOADED_CONFIG=()
+while read -r line; do
+    LIGHTDM_LOADED_CONFIG+=("${line}")
+done < <(printf "%s\n" $(lightdm --show-config 2>&1 | grep -x -A "$(lightdm --show-config 2>&1 | wc -l)" "Sources:" | grep -v "Sources") | sed -E "s|^[A-Z]$||g" | tr -d " ")
 
 # Global
 CURSOR_THEMES=($(get_cursor_theme))
