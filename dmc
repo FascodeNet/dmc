@@ -831,7 +831,8 @@ qtquick_get_value(){
 qtquick_set_config(){
     local _tempfile="/tmp/$(basename "${GREETER_CONFIG["lightdm-qtquick-greeter"]}")-$(cat /dev/urandom | base64 | fold -w 10 | head -n 1)"
     cp "${GREETER_CONFIG["lightdm-qtquick-greeter"]}" "${_tempfile}"
-    cat "${_tempfile}" | jq -r ".${1}|=\"${2}\"" > "${GREETER_CONFIG["lightdm-qtquick-greeter"]}"
+    #cat "${_tempfile}" | jq -r ".${1}|=\"${2}\"" > "${GREETER_CONFIG["lightdm-qtquick-greeter"]}"
+    jq -r ".${1}|=\"${2}\"" < "${_tempfile}" > "${GREETER_CONFIG["lightdm-qtquick-greeter"]}"
     chmod 644 "${GREETER_CONFIG["lightdm-qtquick-greeter"]}"
 }
 
@@ -889,7 +890,6 @@ LIGHTDM_CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" |
 : "${LIGHTDM_CURRENT_GREETER:="lightdm-gtk-greeter"}"
 
 # LightDM - 読み込まれた設定ファイルの一覧
-LIGHTDM_LOADED_CONFIG=()
 while read -r line; do
     LIGHTDM_LOADED_CONFIG+=("${line}")
 done < <(printf "%s\n" "$(lightdm --show-config 2>&1 | grep -x -A "$(lightdm --show-config 2>&1 | wc -l)" "Sources:" | grep -v "Sources" | sed 's|^[A-Z]  ||g')"  | tr -d " ")
