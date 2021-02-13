@@ -213,7 +213,7 @@ lightdm_get_value(){
 # greeter-changeコマンド
 command_lightdm_greeter_change() {
     # 引数チェック
-    if [[ -z "${1}" ]]; then
+    if [[ -z "${1}" ]] || [[ "${1}" = "" ]]; then
         msg_error "Please specify Greeter."
         script_usage
         exit 1
@@ -230,7 +230,7 @@ command_lightdm_greeter_change() {
 
 # greeter-createコマンド
 command_lightdm_greeter_create(){
-    if [[ -z "${1}" ]]; then
+    if [[ -z "${1}" ]] || [[ "${1}" = "" ]]; then
         msg_error "Please specify Greeter."
         script_usage
         exit 1
@@ -359,7 +359,7 @@ command_lightdm_greeter_edit(){
         msg_error "https://github.com/FascodeNet/lightdm-config/issues"
         exit 1
     else
-        if [[ -z ${1} ]]; then
+        if [[ -z "${1}" ]] || [[ "${1}" = "" ]]; then
             msg_warn "Greeter was not specified. Open the currently configured Greeter configuration file."
             echo -n "(Enter to continue) > "
             read -r
@@ -388,7 +388,7 @@ command_lightdm_edit(){
 
 # autologin
 command_lightdm_auto_login(){
-    if [[ -z "${1+SET}" ]]; then
+    if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
         # 既に自動ログインが設定されているかを確認
         local autologin_user="$(lightdm_get_value autologin-user)"
         if [[ -n "${autologin_user}" ]]; then
@@ -525,7 +525,7 @@ gdm_update(){
 
 #== GDM用コマンド ==#
 command_gdm_logo(){
-    if [[ -z "${1+SET}" ]]; then
+    if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
         msg_error "Please specify the image of background"
         exit 1
     fi
@@ -592,7 +592,7 @@ command_gdm_cursor_wizard(){
 }
 
 command_gdm_cursor_change(){
-    if [[ -z "${1+SET}" ]]; then
+    if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
         msg_error "Please specify the cursor theme"
         exit 1
     fi
@@ -625,7 +625,7 @@ command_gdm_tap(){
 
 # autologin
 command_gdm_auto_login(){
-    if [[ -z "${1+SET}" ]]; then
+    if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
         # 既に自動ログインが設定されているかを確認
         local autologin="$(gdm_custom_get_value daemon AutomaticLoginEnable)"
         if [[ "${autologin}" = "True" ]]; then
@@ -798,7 +798,7 @@ command_webkit2_theme_wizard(){
 }
 
 command_webkit2_theme_change(){
-    if [[ -z "${1+SET}" ]]; then
+    if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
         msg_error "Please specify the theme name"
         exit 1
     fi
@@ -837,7 +837,7 @@ qtquick_set_config(){
 
 #== Qtquick用コマンド ==#
 command_qtquick_back(){
-    if [[ -z "${1+SET}" ]]; then
+    if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
         msg_error "Please specify the image of background"
         exit 1
     fi
@@ -966,7 +966,7 @@ case "${DISPLAY_MANAGER}" in
         case "${COMMAND}" in
             "autologin")
                 lightdm_init_configs
-                command_lightdm_auto_login ${COMMAND_ARGS}
+                command_lightdm_auto_login "${COMMAND_ARGS}"
                 ;;
             "greeter")
                 lightdm_init_configs
@@ -974,18 +974,18 @@ case "${DISPLAY_MANAGER}" in
                 ;;
             "greeter-change")
                 lightdm_init_configs
-                command_lightdm_greeter_change ${COMMAND_ARGS}
+                command_lightdm_greeter_change "${COMMAND_ARGS}"
                 ;;
             "greeter-create")
                 lightdm_init_configs
-                command_lightdm_greeter_create ${COMMAND_ARGS}
+                command_lightdm_greeter_create "${COMMAND_ARGS}"
                 ;;
             "greeter-list")
                 command_lightdm_greeter_list
                 ;;
             "greeter-edit")
                 check_root
-                command_lightdm_greeter_edit ${COMMAND_ARGS}
+                command_lightdm_greeter_edit "${COMMAND_ARGS}"
                 ;;
             "remove")
                 check_root
@@ -1007,7 +1007,7 @@ case "${DISPLAY_MANAGER}" in
         case "${COMMAND}" in
             "autologin")
                 gdm_init_configs
-                command_gdm_auto_login ${COMMAND_ARGS}
+                command_gdm_auto_login "${COMMAND_ARGS}"
                 ;;
             "cursor")
                 gdm_init_configs
@@ -1015,23 +1015,23 @@ case "${DISPLAY_MANAGER}" in
                 ;;
             "sound")
                 gdm_init_configs
-                command_gdm_sound ${COMMAND_ARGS}
+                command_gdm_sound "${COMMAND_ARGS}"
                 ;;
             "logo")
                 gdm_init_configs
-                command_gdm_logo ${COMMAND_ARGS}
+                command_gdm_logo "${COMMAND_ARGS}"
                 ;;
             "tap")
                 gdm_init_configs
-                command_gdm_tap ${COMMAND_ARGS}
+                command_gdm_tap "${COMMAND_ARGS}"
                 ;;
             "accessibility")
                 gdm_init_configs
-                command_gdm_accessibility ${COMMAND_ARGS}
+                command_gdm_accessibility "${COMMAND_ARGS}"
                 ;;
             "root-login")
                 gdm_init_configs
-                command_gdm_root_login ${COMMAND_ARGS}
+                command_gdm_root_login "${COMMAND_ARGS}"
                 ;;
             *)
                 msg_error "Undefined commnad(${COMMAND})"
@@ -1046,7 +1046,7 @@ case "${DISPLAY_MANAGER}" in
                 ;;
             "theme-change")
                 webkit2_init_configs
-                command_webkit2_theme_change ${COMMAND_ARGS}
+                command_webkit2_theme_change "${COMMAND_ARGS}"
                 ;;
             *)
                 msg_error "Undefined commnad(${COMMAND})"
@@ -1057,7 +1057,7 @@ case "${DISPLAY_MANAGER}" in
         case "${COMMAND}" in
             "back")
                 qtquick_init_configs
-                command_qtquick_back ${COMMAND_ARGS}
+                command_qtquick_back "${COMMAND_ARGS}"
                 ;;
         esac
         ;;
