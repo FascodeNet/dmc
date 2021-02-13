@@ -909,6 +909,7 @@ NOROOT=false
 ARGUMENT="${*}"
 OPTS="m:e:h"
 OPTL="mode:,editor:,help,non-interactive,noroot,write-all-files"
+# shellcheck disable=SC2086
 if ! OPT="$(getopt -o ${OPTS} -l ${OPTL} -- ${ARGUMENT})"; then
     exit 1
 fi
@@ -954,7 +955,7 @@ if (( "${#}" >= 1 )); then
     shift 1
 fi
 COMMAND_ARGS="${*}"
-: ${COMMAND_ARGS-""} # サブコマンドの引数が何も指定されなかった場合に空文字を代入
+: "${COMMAND_ARGS-""}" # サブコマンドの引数が何も指定されなかった場合に空文字を代入
 
 if [[ "${COMMAND}" = "null" ]]; then
     script_usage
