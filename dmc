@@ -33,10 +33,13 @@ script_usage(){
     echo "    show-config                       Show current settings"
     echo
     echo " GDM command:"
+    echo "    autologin [username] [session]    Set up automatic login (with blank username to disable)"
     echo "    cursor                            Run cursor selection wizard"
     echo "    sound [true or false]             Toggle the sound when an event occurs"
     echo "    logo [image]                      Specify the logo of the login screen"
     echo "    tap [true or false]               Toggle whether to recognize the tap as a click"
+    echo "    accessibility [true or false]     Toggle whether to show accessibility menu"
+    echo "    root-login [true or false]        Toggle whether to enable root login"
     echo
     echo " Webkit2 command:"
     echo "    theme                             Run theme selection wizard"
@@ -917,6 +920,11 @@ fi
 COMMAND_ARGS="${@}"
 : ${COMMAND_ARGS-""} # サブコマンドの引数が何も指定されなかった場合に空文字を代入
 
+if [[ "${COMMAND}" = "null" ]]; then
+    script_usage
+    exit 1
+fi
+
 case "${DISPLAY_MANAGER}" in
     "lightdm")
         case "${COMMAND}" in
@@ -953,10 +961,6 @@ case "${DISPLAY_MANAGER}" in
                 ;;
             "show-config")
                 command_lightdm_show_config
-                ;;
-            "null")
-                script_usage
-                exit 1
                 ;;
             *)
                 msg_error "Undefined commnad(${COMMAND})"
