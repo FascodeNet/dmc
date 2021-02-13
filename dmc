@@ -135,7 +135,10 @@ get_cursor_theme(){
     local _dir _cursor_theme_dir_list _find_cursor_dir_list=("/usr/share/icons" "${HOME}/.local/share/icons" "${HOME}/.icons")
     for _dir in "${_find_cursor_dir_list[@]}"; do
         if [[ -d "${_dir}" ]]; then
-            _cursor_theme_dir_list=($(find "${_dir}" -type d -name "cursors" | xargs -i dirname {} | sort))
+            #_cursor_theme_dir_list=($(find "${_dir}" -type d -name "cursors" | xargs -i dirname {} | sort))
+            while read -r line; do
+                _cursor_theme_dir_list+=("${line}")
+            done < <(find "${_dir}" -type d -name "cursors" | xargs -i dirname {} | sort)
         fi
     done
     
@@ -743,7 +746,11 @@ webkit2_set_config(){
 
 #== webkit2用コマンド ==#
 command_webkit2_theme_wizard(){
-    local _theme_list=($(ls /usr/share/lightdm-webkit/themes))
+    local _theme_list
+    while read -r line; do
+        _theme_list+=("${line}")
+    done < <(ls /usr/share/lightdm-webkit/themes)
+
     local _current_theme=$(webkit2_get_value greeter webkit_theme | sed "s|\"||g")
     local _theme _c
     echo "Please select the theme to use."
@@ -883,7 +890,10 @@ LIGHTDM_GREETERS_DIR="$(lightdm_get_value "greeters-directory")"
 : "${LIGHTDM_GREETERS_DIR:="/usr/share/xgreeters"}"
 
 # LightDM - Greeter一覧
-LIGHTDM_GREETERS=( $( (ls "${LIGHTDM_GREETERS_DIR}" | sed "s|.desktop$||g") 2> /dev/null ))
+#LIGHTDM_GREETERS=( $( )
+while read -r line; do
+    LIGHTDM_GREETERS+=("${line}")
+done < <( (ls "${LIGHTDM_GREETERS_DIR}" | sed "s|.desktop$||g") 2> /dev/null )
 
 # LightDM - 現在設定されているGreeter
 LIGHTDM_CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" | cut -d "=" -f 2)"
