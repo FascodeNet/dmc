@@ -138,7 +138,7 @@ get_cursor_theme(){
             #_cursor_theme_dir_list=($(find "${_dir}" -type d -name "cursors" | xargs -i dirname {} | sort))
             while read -r line; do
                 _cursor_theme_dir_list+=("${line}")
-            done < <(find "${_dir}" -type d -name "cursors" | xargs -i dirname {} | sort)
+            done < <(find "${_dir}" -type d -name "cursors" -print0 | xargs -i dirname {} | sort)
         fi
     done
     
@@ -415,8 +415,8 @@ command_lightdm_auto_login(){
 
         # セッションを設定
         if [[ -z "${autologin_session+SET}" ]]; then
-            if (( $(find "/usr/share/xsessions" -type f 2> /dev/null | xargs -i basename {} | wc -l) <= 1 )); then
-                autologin_session="$(find "/usr/share/xsessions" -type f 2> /dev/null | xargs -i basename {} | sed 's|.desktop$||g')"
+            if (( $(find "/usr/share/xsessions" -print0 -type f 2> /dev/null | xargs -i basename {} | wc -l) <= 1 )); then
+                autologin_session="$(find "/usr/share/xsessions" -print0 -type f 2> /dev/null | xargs -i basename {} | sed 's|.desktop$||g')"
             elif [[ "${NON_INTERACTIVE}" = true ]]; then
                 # 非対話モード
                 # ~/.dmrcの値を設定します
@@ -649,8 +649,8 @@ command_gdm_auto_login(){
 
         # セッションを設定 (WayLandのセッションは現在サポートされていません)
         if [[ -z "${autologin_session+SET}" ]]; then
-            if (( $(find "/usr/share/xsessions" -type f 2> /dev/null | xargs -i basename {} | wc -l) <= 1 )); then
-                autologin_session="$(find "/usr/share/xsessions" -type f 2> /dev/null | xargs -i basename {} | sed 's|.desktop$||g')"
+            if (( $(find "/usr/share/xsessions" -print0 -type f 2> /dev/null | xargs -i basename {} | wc -l) <= 1 )); then
+                autologin_session="$(find "/usr/share/xsessions" -print0 -type f 2> /dev/null | xargs -i basename {} | sed 's|.desktop$||g')"
             elif [[ "${NON_INTERACTIVE}" = true ]]; then
                 # 非対話モード
                 # ~/.dmrcの値を設定します
@@ -893,7 +893,7 @@ LIGHTDM_GREETERS_DIR="$(lightdm_get_value "greeters-directory")"
 #LIGHTDM_GREETERS=( $( )
 while read -r line; do
     LIGHTDM_GREETERS+=("${line}")
-done < <( (find "${LIGHTDM_GREETERS_DIR}" -type f | xargs -i basename {} | sed "s|.desktop$||g") 2> /dev/null )
+done < <( (find "${LIGHTDM_GREETERS_DIR}" -print0 -type f | xargs -i basename {} | sed "s|.desktop$||g") 2> /dev/null )
 
 # LightDM - 現在設定されているGreeter
 LIGHTDM_CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" | cut -d "=" -f 2)"
