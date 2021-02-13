@@ -110,7 +110,7 @@ wrapper(){
     local _command="${1}"
     shift 1
     if which "${_command}" >/dev/null 2>&1; then
-        $(which "${_command}") ${*}
+        $(which "${_command}") "${@}"
     else
         msg_error "${_command} was not found"
         exit 1
@@ -118,11 +118,11 @@ wrapper(){
 }
 
 crudini(){
-    wrapper crudini ${*}
+    wrapper crudini "${@}"
 }
 
 jq(){
-    wrapper jq ${*}
+    wrapper jq "${@}"
 }
 
 
