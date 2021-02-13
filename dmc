@@ -145,7 +145,7 @@ get_cursor_theme(){
     local _cursor_theme _cursor_theme_name _temp
     for _cursor_theme in "${_cursor_theme_dir_list[@]}"; do
         _temp+=("$(grep -E "^Name=" "${_cursor_theme}/cursor.theme" 2> /dev/null | sed "s|^Name=||g")")
-        if [[ -z "${_temp}" ]]; then
+        if [[ -z "${_temp[*]}" ]]; then
             _cursor_theme_name+=("$(basename "${_cursor_theme}")")
         fi
     done
