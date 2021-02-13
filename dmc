@@ -556,7 +556,7 @@ command_gdm_cursor_wizard(){
     # 質問する
     local _input
     echo -n "(1 ~ ${#CURSOR_THEMES[@]}) > "
-    read _input
+    read -r _input
 
     local _recall
     _recall(){
@@ -762,6 +762,7 @@ command_webkit2_theme_wizard(){
     echo -n "(1 ~ ${#_theme_list[@]}) > "
     read -r _input
 
+    # shellcheck disable=SC2034
     local _recall
     _recall(){
         echo "Please enter the correct value."
