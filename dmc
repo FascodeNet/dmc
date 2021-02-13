@@ -168,7 +168,7 @@ lightdm_get_source_file(){
 
 # 設定ファイルの値を変更する
 lightdm_set_config(){
-    local key="${1}" value="${2}" file=${3-${LIGHTDM_CONFIG}}
+    local key="${1}" value="${2}" file=${3-${DISPLAY_MANAGER_CONFIG["lightdm"]}}
     if [[ "${WRITE_ALL_FILES}" = true ]] && [[ -n "$(lightdm_get_source_file "${1}")" ]]; then
         crudini --set "$(lightdm_get_source_file "${1}")" 'Seat:*' "${key}" "${value}"
     else
@@ -184,19 +184,19 @@ lightdm_set_config(){
 # 設定ファイルのキーを削除する
 lightdm_remove_key(){
     local key="${1}" _config
-    if grep -E "^ ?${key}.+" "${LIGHTDM_CONFIG}" 1>/dev/null 2>&1; then
-        sed -i -r "s|^ ?${key} ?=.+||g" "${LIGHTDM_CONFIG}"
-        sed -i '/^$/d' "${LIGHTDM_CONFIG}"
+    if grep -E "^ ?${key}.+" "${DISPLAY_MANAGER_CONFIG["lightdm"]}" 1>/dev/null 2>&1; then
+        sed -i -r "s|^ ?${key} ?=.+||g" "${DISPLAY_MANAGER_CONFIG["lightdm"]}"
+        sed -i '/^$/d' "${DISPLAY_MANAGER_CONFIG["lightdm"]}"
     fi
 }
 
 # 設定ファイルを作成
 lightdm_init_configs(){
     check_root
-    if [[ ! -f "${LIGHTDM_CONFIG}" ]]; then
-        mkdir -p "$(dirname "${LIGHTDM_CONFIG}")"
-        touch "${LIGHTDM_CONFIG}"
-        echo "[Seat:*]" > "${LIGHTDM_CONFIG}"
+    if [[ ! -f "${DISPLAY_MANAGER_CONFIG["lightdm"]}" ]]; then
+        mkdir -p "$(dirname "${DISPLAY_MANAGER_CONFIG["lightdm"]}")"
+        touch "${DISPLAY_MANAGER_CONFIG["lightdm"]}"
+        echo "[Seat:*]" > "${DISPLAY_MANAGER_CONFIG["lightdm"]}"
     fi
 }
 
@@ -337,14 +337,14 @@ run_greeter_wizard(){
 
 # removeコマンド
 command_lightdm_remove(){
-    if [[ ! -f "${LIGHTDM_CONFIG}" ]]; then
+    if [[ ! -f "${DISPLAY_MANAGER_CONFIG["lightdm"]}" ]]; then
         return 0
     else
         local _yes_or_no
         echo -ne "Are you sure you want to delete all settings?\nThis change is irreversible.\n (y or n) > "
         read -r -n 1 _yes_or_no
         if [[ "${_yes_or_no}" = "y" ]]; then
-            mv "${LIGHTDM_CONFIG}" "${LIGHTDM_CONFIG}.disabled"
+            mv "${DISPLAY_MANAGER_CONFIG["lightdm"]}" "${DISPLAY_MANAGER_CONFIG["lightdm"]}.disabled"
         fi
     fi
 }
@@ -882,9 +882,6 @@ declare -A DISPLAY_MANAGER_CONFIG=(
 
 #== CONFIGS ==#
 
-# LightDM - 設定ファイル
-LIGHTDM_CONFIG="${DISPLAY_MANAGER_CONFIG["lightdm"]}"
-
 # LightDM - Greeterのディレクトリ
 LIGHTDM_GREETERS_DIR="$(lightdm_get_value "greeters-directory")"
 : "${LIGHTDM_GREETERS_DIR:="/usr/share/xgreeters"}"
@@ -1074,6 +1071,34 @@ case "${DISPLAY_MANAGER}" in
             "back")
                 qtquick_init_configs
                 command_qtquick_back "${COMMAND_ARGS}"
+                ;;
+        esac
+        ;;
+    "slick")
+        case "${COMMAND}" in
+            "back")
+                slick_init_configs
+                command_slick_back "${COMMAND_ARGS}"
+                ;;
+            "grid")
+                slick_init_configs
+                command_slick_grid "${COMMAND_ARGS}"
+                ;;
+            "icon")
+                slick_init_configs
+                command_slick_icon_wizard
+                ;;
+            "theme")
+                slick_init_configs
+                command_slick_theme_wizard
+                ;;
+            "other-monitor")
+                slick_init_configs
+                command_slick_other_monitor "${COMMAND_ARGS}"
+                ;;
+            "logo")
+                slick_init_configs
+                command_slick_logo "${COMMAND_ARGS}"
                 ;;
         esac
         ;;
