@@ -150,7 +150,7 @@ get_cursor_theme(){
         fi
         _cursor_theme_name+=("${_name}")
     done
-    echo "${_cursor_theme_name[@]}"
+    printf "%s\n" "${_cursor_theme_name[@]}"
 }
 
 # GTKテーマの一覧を取得
@@ -174,13 +174,52 @@ get_gtk_theme(){
         fi
     done
     
-    printf "%s\n" "${_gtk_theme_name_list[@]}" | sort | uniq | tr "\n" " "
+    printf "%s\n" "${_gtk_theme_name_list[@]}" | sort | uniq
 }
 
 # 質問を行う関数
+# ask_question -d <デフォルト値> <選択肢1> <選択肢2> ...
 ask_question(){
-    local _choice=("${@}")
-    
+    local arg OPTARG OPTIND
+    local _default="" _choice_list _count _choice
+    while getopts "d:" arg; do
+        case "${arg}" in
+            d)  _default="${OPTARG}" ;;
+        esac
+    done
+    shift $((OPTIND - 1))
+    _choice_list=("${@}")
+
+    for (( _count=1; _count<=${#_choice_list[@]}; _count++)); do
+        _choice="${_choice_list[$(( _count - 1 ))]}"
+        if [[ ! "${_default}" = "" ]] && [[ "${_choice}" = "${_default}" ]]; then
+            echo " * ${_count}: ${_choice}" >&2
+        else
+            echo "   ${_count}: ${_choice}" >&2
+        fi
+        unset _choice
+    done
+    echo -n "(1 ~ ${#_choice_list[@]}) > " >&2
+    read -r _input
+
+    # 回答を解析
+    if check_int "${_input}"; then
+        # 数字が入力された
+        if (( 1 <= _input)) && (( _input <= ${#_choice_list[@]} )); then
+            _choice="${_choice_list[$(( _input - 1 ))]}"
+        else
+            return 1
+        fi
+    else
+        # 文字が入力された
+        if printf "%s\n" "${_choice_list[@]}" | grep -x "${_input}" 1>/dev/null 2>&1; then
+            _choice="${_input}"
+        else
+            return 1
+        fi
+    fi
+    echo "${_choice}"
+    return 0
 }
 
 #== LightDM用の汎用関数 ==#
@@ -320,40 +359,9 @@ run_greeter_wizard(){
     # 質問する
     local _c _greeter
     echo "Please select the greeter to use."
-    for (( _c=1; _c<=${#LIGHTDM_GREETERS[@]}; _c++)); do
-        _greeter="${LIGHTDM_GREETERS[$(( _c - 1 ))]}"
-        if [[ "${_greeter}" = "${LIGHTDM_CURRENT_GREETER}" ]]; then
-            echo " * ${_c}: ${_greeter}"
-        else
-            echo "   ${_c}: ${_greeter}"
-        fi
-        unset _greeter
-    done
-    echo -n "(1 ~ ${#LIGHTDM_GREETERS[@]}) > "
-    read -r _input
-
-    local _recall
-    _recall(){
-        echo "Please enter the correct value."
+    if ! _greeter="$(ask_question -d "${LIGHTDM_CURRENT_GREETER}" "${LIGHTDM_GREETERS[@]}")"; then
         run_greeter_wizard
         exit 0
-    }
-
-    # 回答を解析
-    if check_int "${_input}"; then
-        # 数字が入力された
-        if (( 1 <= _input)) && (( _input <= ${#LIGHTDM_GREETERS[@]} )); then
-            _greeter="${LIGHTDM_GREETERS[$(( _input - 1 ))]}"
-        else
-            _recall
-        fi
-    else
-        # 文字が入力された
-        if printf "%s\n" "${LIGHTDM_GREETERS[@]}" | grep -x "${_input}" 1>/dev/null 2>&1; then
-            _greeter="${_input}"
-        else
-            _recall
-        fi
     fi
 
     # 結果に応じて処理を実行
@@ -585,39 +593,9 @@ command_gdm_cursor_wizard(){
     local _c
     unset _cursor_theme
     echo "Please select the cursor theme to use."
-    for (( _c=1; _c<=${#cursor_themes[@]}; _c++)); do
-        _cursor_theme="${cursor_themes[$(( _c - 1 ))]}"
-        echo "   ${_c}: ${_cursor_theme}"
-        unset _cursor_theme
-    done
-
-    # 質問する
-    local _input
-    echo -n "(1 ~ ${#cursor_themes[@]}) > "
-    read -r _input
-
-    local _recall
-    _recall(){
-        echo "Please enter the correct value."
-        command_gdm_cursor_wizard
+    if ! _cursor_theme="$(ask_question "${cursor_themes[@]}")"; then
+        run_greeter_wizard
         exit 0
-    }
-
-    # 回答を解析
-    if check_int "${_input}"; then
-        # 数字が入力された
-        if (( 1 <= _input)) && (( _input <= ${#cursor_themes[@]} )); then
-            _cursor_theme="${cursor_themes[$(( _input - 1 ))]}"
-        else
-            _recall
-        fi
-    else
-        # 文字が入力された
-        if printf "%s\n" "${cursor_themes[@]}" | grep -x "${_input}" 1>/dev/null 2>&1; then
-            _cursor_theme="${_input}"
-        else
-            _recall
-        fi
     fi
 
     if [[ -n "${_cursor_theme}" ]]; then
@@ -790,47 +768,11 @@ command_webkit2_theme_wizard(){
 
     local _current_theme=$(webkit2_get_value greeter webkit_theme | sed "s|\"||g")
     local _theme _c
-    echo "Please select the theme to use."
-    for (( _c=1; _c<=${#_theme_list[@]}; _c++)); do
-        _theme="${_theme_list[$(( _c - 1 ))]}"
-        if [[ "${_theme}" = "${_current_theme}" ]]; then
-            echo " * ${_c}: ${_theme}"
-        else
-            echo "   ${_c}: ${_theme}"
-        fi
-        unset _theme
-    done
-
-    # 質問する
-    local _input
-    echo -n "(1 ~ ${#_theme_list[@]}) > "
-    read -r _input
-
-    # shellcheck disable=SC2034
-    local _recall
-    _recall(){
-        echo "Please enter the correct value."
-        command_webkit2_theme_wizard
+    echo "Please select the theme to use." _theme_list
+    if ! _theme="$(ask_question -d "${_current_theme}" "${_theme_list[@]}")"; then
+        run_greeter_wizard
         exit 0
-    }
-
-    # 回答を解析
-    if check_int "${_input}"; then
-        # 数字が入力された
-        if (( 1 <= _input)) && (( _input <= ${#_theme_list[@]} )); then
-            _theme="${_theme_list[$(( _input - 1 ))]}"
-        else
-            _recall
-        fi
-    else
-        # 文字が入力された
-        if printf "%s\n" "${_theme_list[@]}" | grep -x "${_input}" 1>/dev/null 2>&1; then
-            _theme="${_input}"
-        else
-            _recall
-        fi
     fi
-
     if [[ -n "${_theme}" ]]; then
         command_webkit2_theme_change "${_theme}"
         echo "Changed the theme to ${_theme}"
@@ -901,19 +843,19 @@ command_qtquick_back(){
 
 #== slick用の汎用関数 ==#
 slick_get_value(){
-    crudini --get "${GREETER_CONFIG["slick"]}" "Greeter" "${1}"
+    crudini --get "${GREETER_CONFIG["lightdm-slick-greeter"]}" "Greeter" "${1}"
 }
 
 slick_set_config(){
-    crudini --set "${GREETER_CONFIG["slick"]}" "Greeter" "${1}" "${2}"
+    crudini --set "${GREETER_CONFIG["lightdm-slick-greeter"]}" "Greeter" "${1}" "${2}"
 }
 
 slick_init_configs(){
     check_root
-    if [[ -f "${GREETER_CONFIG["slick"]}" ]]; then
-        mkdir -p "$(dirname "${GREETER_CONFIG["slick"]}")"
-        touch "${GREETER_CONFIG["slick"]}"
-        echo "[Greeter]" > "${GREETER_CONFIG["slick"]}"
+    if [[ -f "${GREETER_CONFIG["lightdm-slick-greeter"]}" ]]; then
+        mkdir -p "$(dirname "${GREETER_CONFIG["lightdm-slick-greeter"]}")"
+        touch "${GREETER_CONFIG["lightdm-slick-greeter"]}"
+        echo "[Greeter]" > "${GREETER_CONFIG["lightdm-slick-greeter"]}"
     fi
 }
 
@@ -950,6 +892,23 @@ command_slick_theme_wizard(){
     local gtk_themes
     while read -r line; do gtk_themes+=("${line}"); done < <(get_gtk_theme)
 
+    # 質問する
+    local _theme
+    echo "Please select the theme to use."
+    if ! _theme="$(ask_question "${gtk_themes[@]}")"; then
+        command_slick_theme_wizard
+        exit 0
+    fi
+
+    # 結果に応じて処理を実行
+    if [[ -n "${_theme}" ]]; then
+        :
+        # ここでテーマ適用を実行
+    else
+        command_slick_theme_wizard
+        exit 0
+    fi
+    echo "Changed theme to ${_theme}"
 
 }
 
@@ -981,7 +940,7 @@ LIGHTDM_GREETERS_DIR="$(lightdm_get_value "greeters-directory")"
 #LIGHTDM_GREETERS=( $( )
 while read -r line; do
     LIGHTDM_GREETERS+=("${line}")
-done < <( (find "${LIGHTDM_GREETERS_DIR}" -print0 -type f | xargs -0 -i basename {} | sed "s|.desktop$||g") 2> /dev/null )
+done < <( (find "${LIGHTDM_GREETERS_DIR}" -print0 -type f | xargs -0 -i basename {} | sed "s|.desktop$||g" | grep -xv "xgreeters") 2> /dev/null )
 
 # LightDM - 現在設定されているGreeter
 LIGHTDM_CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" | cut -d "=" -f 2)"
