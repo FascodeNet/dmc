@@ -98,7 +98,7 @@ check_int(){
 }
 
 check_bool(){
-    if [[ -n "${1}" ]] && ([[ "${1}" = "true" ]] ||[[ "${1}" = "false" ]]); then
+    if [[ -n "${1}" ]] && {[[ "${1}" = "true" ]] ||[[ "${1}" = "false" ]];}; then
         return 0
     else
         return 1
