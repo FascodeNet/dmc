@@ -607,7 +607,7 @@ command_gdm_cursor_change(){
 }
 
 command_gdm_sound(){
-    local _arg="$(echo "${1-""}" | tr A-Z a-z)"
+    local _arg="$(echo "${1-""}" | tr "[:upper:]" "[:lower:]")"
     if ! check_bool "${_arg}"; then
         msg_error "Please specify true or false"
         script_usage
@@ -617,7 +617,7 @@ command_gdm_sound(){
 }
 
 command_gdm_tap(){
-    local _arg="$(echo "${1-""}" | tr A-Z a-z)"
+    local _arg="$(echo "${1-""}" | tr "[:upper:]" "[:lower:]")"
     if ! check_bool "${_arg}"; then
         msg_error "Please specify true or false"
         script_usage
@@ -705,7 +705,7 @@ command_gdm_auto_login(){
 
 # accessibility コマンド
 command_gdm_accessibility(){
-    local _arg="$(echo "${1-""}" | tr A-Z a-z)"
+    local _arg="$(echo "${1-""}" | tr "[:upper:]" "[:lower:]")"
     if ! check_bool "${_arg}"; then
         msg_error "Please specify true or false"
         script_usage
@@ -716,7 +716,7 @@ command_gdm_accessibility(){
 
 # root-login コマンド
 command_gdm_root_login(){
-    local _arg="$(echo "${1-""}" | tr A-Z a-z)"
+    local _arg="$(echo "${1-""}" | tr "[:upper:]" "[:lower:]")"
     if ! check_bool "${_arg}"; then
         msg_error "Please specify true or false"
         script_usage
