@@ -914,8 +914,9 @@ NOROOT=false
 ARGUMENT="${@}"
 OPTS="m:e:h"
 OPTL="mode:,editor:,help,non-interactive,noroot,write-all-files"
-OPT="$(getopt -o ${OPTS} -l ${OPTL} -- ${ARGUMENT})"
-(( ${?} != 0 )) && exit 1
+if ! OPT="$(getopt -o ${OPTS} -l ${OPTL} -- ${ARGUMENT})"; then
+    exit 1
+fi
 
 eval set -- "${OPT}"
 unset OPT OPTS OPTL
