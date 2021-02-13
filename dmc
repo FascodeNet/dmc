@@ -906,7 +906,7 @@ NOROOT=false
 
 
 #== 引数解析 ==#
-ARGUMENT="${@}"
+ARGUMENT="${*}"
 OPTS="m:e:h"
 OPTL="mode:,editor:,help,non-interactive,noroot,write-all-files"
 if ! OPT="$(getopt -o ${OPTS} -l ${OPTL} -- ${ARGUMENT})"; then
@@ -953,7 +953,7 @@ COMMAND="${1:-null}"
 if (( "${#}" >= 1 )); then
     shift 1
 fi
-COMMAND_ARGS="${@}"
+COMMAND_ARGS="${*}"
 : ${COMMAND_ARGS-""} # サブコマンドの引数が何も指定されなかった場合に空文字を代入
 
 if [[ "${COMMAND}" = "null" ]]; then
