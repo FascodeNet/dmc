@@ -895,7 +895,8 @@ while read -r line; do
 done < <(printf "%s\n" "$(lightdm --show-config 2>&1 | grep -x -A "$(lightdm --show-config 2>&1 | wc -l)" "Sources:" | grep -v "Sources" | sed 's|^[A-Z]  ||g')"  | tr -d " ")
 
 # Global
-CURSOR_THEMES=($(get_cursor_theme))
+while read -r line; do CURSOR_THEMES+=("${line}"); done < <(get_cursor_theme)
+
 USE_EDITOR="${EDITOR:-vi}"
 DISPLAY_MANAGER="lightdm"
 
