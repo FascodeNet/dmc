@@ -296,7 +296,7 @@ run_greeter_wizard(){
         unset _greeter
     done
     echo -n "(1 ~ ${#LIGHTDM_GREETERS[@]}) > "
-    read _input
+    read -r _input
 
     local _recall
     _recall(){
@@ -339,7 +339,7 @@ command_lightdm_remove(){
     else
         local _yes_or_no
         echo -ne "Are you sure you want to delete all settings?\nThis change is irreversible.\n (y or n) > "
-        read -n 1 _yes_or_no
+        read -r -n 1 _yes_or_no
         if [[ "${_yes_or_no}" = "y" ]]; then
             mv "${LIGHTDM_CONFIG}" "${LIGHTDM_CONFIG}.disabled"
         fi
@@ -362,7 +362,7 @@ command_lightdm_greeter_edit(){
         if [[ -z ${1} ]]; then
             msg_warn "Greeter was not specified. Open the currently configured Greeter configuration file."
             echo -n "(Enter to continue) > "
-            read
+            read -r
         fi
         set -u
         bash -c "${USE_EDITOR} ${GREETER_CONFIG["${_greeter}"]}"
@@ -378,7 +378,7 @@ command_lightdm_edit(){
     fi
     for _config in "${LIGHTDM_LOADED_CONFIG[@]}"; do
         echo -ne "Edit ${_config} ? (y or n)> "
-        read -n 1 _yes_or_no
+        read -r -n 1 _yes_or_no
         echo
         if [[ "${_yes_or_no}" = "y" ]]; then
             bash -c "${USE_EDITOR} ${_config}"
@@ -430,7 +430,7 @@ command_lightdm_auto_login(){
                     echo "   ${session}"
                 done
                 echo -n "(session name) > "
-                read session
+                read -r session
                 if [[ -f "/usr/share/xsessions/${session}.desktop" ]]; then
                     autologin_session="${session}"
                 else
@@ -664,7 +664,7 @@ command_gdm_auto_login(){
                     echo "   $(basename ${session} | sed "s|.desktop$||g")"
                 done
                 echo -n "(session name) > "
-                read session
+                read -r session
                 if [[ -f "/usr/share/xsessions/${session}.desktop" ]]; then
                     autologin_session="${session}"
                 else
@@ -760,7 +760,7 @@ command_webkit2_theme_wizard(){
     # 質問する
     local _input
     echo -n "(1 ~ ${#_theme_list[@]}) > "
-    read _input
+    read -r _input
 
     local _recall
     _recall(){
