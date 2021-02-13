@@ -181,7 +181,7 @@ lightdm_set_config(){
 # 設定ファイルのキーを削除する
 lightdm_remove_key(){
     local key="${1}" _config
-    if grep -E "^ ?${key}.+" "${LIGHTDM_CONFIG}" > /dev/null 2> &1; then
+    if grep -E "^ ?${key}.+" "${LIGHTDM_CONFIG}" 1>/dev/null 2>&1; then
         sed -i -r "s|^ ?${key} ?=.+||g" "${LIGHTDM_CONFIG}"
         sed -i '/^$/d' "${LIGHTDM_CONFIG}"
     fi
