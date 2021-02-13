@@ -35,7 +35,7 @@ script_usage(){
     echo " GDM command:"
     echo "    autologin [username] [session]    Set up automatic login (with blank username to disable)"
     echo "    cursor                            Run cursor selection wizard"
-    #echo "    cursor-change [cursor]            Specify the cursor theme"
+    echo "    cursor-change [cursor]            Specify the cursor theme"
     echo "    cursor-list                       Show a list of cursor theme"
     echo "    sound [true or false]             Toggle the sound when an event occurs"
     echo "    logo [image]                      Specify the logo of the login screen"
@@ -1072,6 +1072,10 @@ case "${DISPLAY_MANAGER}" in
             "cursor")
                 gdm_init_configs
                 command_gdm_cursor_wizard
+                ;;
+            "cursor-change")
+                gdm_init_configs
+                command_gdm_cursor_change "${COMMAND_ARGS}"
                 ;;
             "sound")
                 gdm_init_configs
