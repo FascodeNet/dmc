@@ -167,12 +167,12 @@ lightdm_get_source_file(){
 lightdm_set_config(){
     local key="${1}" value="${2}" file=${3-${LIGHTDM_CONFIG}}
     if [[ "${WRITE_ALL_FILES}" = true ]] && [[ -n "$(lightdm_get_source_file "${1}")" ]]; then
-        crudini --set "$(lightdm_get_source_file "${1}")" 'Seat:*' "${1}" "${2}"
+        crudini --set "$(lightdm_get_source_file "${1}")" 'Seat:*' "${key}" "${value}"
     else
-        crudini --set "${file}" 'Seat:*' "${1}" "${2}"
+        crudini --set "${file}" 'Seat:*' "${key}" "${value}"
     fi
 
-    if [[ ! "$(lightdm_get_value "${1}")" = "${2}" ]]; then
+    if [[ ! "$(lightdm_get_value "${key}")" = "${value}" ]]; then
         msg_error "Failed to change the setting value. A value has already been set for $(lightdm_get_source_file "${1}")"
         msg_error "lightdm-config does not manipulate other configuration files for safety. Comment out the settings in that file."
     fi
