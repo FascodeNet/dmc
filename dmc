@@ -50,9 +50,15 @@ script_usage(){
     echo " Qtquick command:"
     echo "    back                              Specify the background image"
     echo
+    echo " Slick command:"
+    echo "    back [image]                      Specify the background image"
+    echo "    grid [true or false]              Toggle whether to show grid"
+    echo "    icon                              Run icon theme selection wizard"
+    echo "    theme                             Run gtk theme selection wizard"
+    echo
     echo " General option:"
-    echo "    -m | --mode                       Specifiy the target you want to set"
-    echo "    -e | --editer                     Specifiy the editor to use for editing"
+    echo "    -m | --mode [mode name]           Specifiy the target you want to set"
+    echo "    -e | --editer [editor path]       Specifiy the editor to use for editing"
     echo "    -h | --help                       This help message and exit"
     echo "    --non-interactive                 Run in non-interactive mode"
     echo "    --noroot                          No check root permission"
@@ -60,7 +66,11 @@ script_usage(){
     echo
     echo " Supported modes:"
     echo "    Display managers: lightdm, gdm"
-    echo "    LightDM greeters: webkit2, qtquick"
+    echo "    LightDM greeters: webkit2, qtquick, slick"
+    echo
+    echo " This tool is incomplete and still under development."
+    echo " If you find a bug, please report it on GitHub."
+    echo " https://github.com/FascodeNet/dmc"
     echo
 }
 
