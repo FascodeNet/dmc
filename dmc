@@ -135,22 +135,51 @@ get_cursor_theme(){
     local _dir _cursor_theme_dir_list _find_cursor_dir_list=("/usr/share/icons" "${HOME}/.local/share/icons" "${HOME}/.icons")
     for _dir in "${_find_cursor_dir_list[@]}"; do
         if [[ -d "${_dir}" ]]; then
-            #_cursor_theme_dir_list=($(find "${_dir}" -type d -name "cursors" | xargs -i dirname {} | sort))
             while read -r line; do
                 _cursor_theme_dir_list+=("${line}")
             done < <(find "${_dir}" -type d -name "cursors" -print0 | xargs -0 -i dirname {} | sort)
         fi
     done
+    unset _dir _find_cursor_dir_list
     
-    local _cursor_theme _cursor_theme_name _temp
+    local _cursor_theme _cursor_theme_name _name
     for _cursor_theme in "${_cursor_theme_dir_list[@]}"; do
-        _temp+=("$(grep -E "^Name=" "${_cursor_theme}/cursor.theme" 2> /dev/null | sed "s|^Name=||g")")
-        if [[ -z "${_temp[*]}" ]]; then
-            _cursor_theme_name+=("$(basename "${_cursor_theme}")")
+        _name="$(grep -E "^Name=" "${_cursor_theme}/cursor.theme" 2> /dev/null | sed "s|^Name=||g")"
+        if [[ -z "${_name}" ]]; then
+            _name="$(basename "${_cursor_theme}")"
         fi
+        _cursor_theme_name+=("${_name}")
     done
     echo "${_cursor_theme_name[@]}"
 }
+
+# GTKテーマの一覧を取得
+get_gtk_theme(){
+    local _dir _find_theme_dir_list=("/usr/share/themes" "${HOME}/.local/share/themes" "${HOME}/.themes")
+    for _dir in "${_find_theme_dir_list[@]}"; do
+        if [[ -d "${_dir}" ]]; then
+            while read -r line; do
+                _gtk_theme_dir_list+=("${line}")
+            done < <(find "${_dir}" -type d -name "gtk-*" -print0 | xargs -0 -i dirname {} | tr " " "\n" | sort | uniq)
+        fi
+    done
+
+    local _theme_name
+    for _dir in "${_gtk_theme_dir_list[@]}"; do
+        _theme_name="$(crudini --get "${_dir}/index.theme" 'Desktop Entry' "Name" 2> /dev/null ;:)"
+        if [[ -z "${_theme_name}" ]]; then
+            continue
+        else
+            _gtk_theme_name_list+=("${_theme_name}")
+        fi
+    done
+    
+    printf "%s\n" "${_gtk_theme_name_list[@]}" | sort | uniq | tr "\n" " "
+}
+
+#get_gtk_theme
+get_cursor_theme
+exit 0
 
 #== LightDM用の汎用関数 ==#
 # キーが設定されている設定ファイル
@@ -860,6 +889,57 @@ command_qtquick_back(){
     chmod 644 "${_backgrounf_file}"
     
     qtquick_set_config "background_path" "file://${_backgrounf_file}"
+}
+
+#== slick用の汎用関数 ==#
+slick_get_value(){
+    crudini --get "${GREETER_CONFIG["slick"]}" "Greeter" "${1}"
+}
+
+slick_set_config(){
+    crudini --set "${GREETER_CONFIG["slick"]}" "Greeter" "${1}" "${2}"
+}
+
+slick_init_configs(){
+    check_root
+    if [[ -f "${GREETER_CONFIG["slick"]}" ]]; then
+        mkdir -p "$(dirname "${GREETER_CONFIG["slick"]}")"
+        touch "${GREETER_CONFIG["slick"]}"
+        echo "[Greeter]" > "${GREETER_CONFIG["slick"]}"
+    fi
+}
+
+command_slick_grid(){
+    local _arg="$(echo "${1-""}" | tr "[:upper:]" "[:lower:]")"
+    if ! check_bool "${_arg}"; then
+        msg_error "Please specify true or false"
+        script_usage
+        exit 1
+    fi
+    slick_set_config "draw-grid" "${_arg}"
+}
+
+command_slick_back(){
+    if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
+        msg_error "Please specify the image of background"
+        exit 1
+    fi
+    if [[ ! -f "${1}" ]]; then
+        msg_error "${1} was not found."
+        exit 1
+    fi
+
+    local _backgrounf_file="/usr/share/backgrounds/lightdm/slick-greeter"
+    mkdir -p "$(dirname "${_backgrounf_file}")"
+    cp "${1}" "${_backgrounf_file}"
+    chmod 644 "${_backgrounf_file}"
+    
+    slick_set_config "background" "${_backgrounf_file}"
+}
+
+
+command_slick_theme_wizard(){
+    :
 }
 
 
