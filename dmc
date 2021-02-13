@@ -280,7 +280,7 @@ run_greeter_wizard(){
     # 質問する
     local _c _greeter
     echo "Please select the greeter to use."
-    for (( _c=1; _c<=${#GREETERS[@]}; _c++)); do
+    for (( _c=1; _c<=${#LIGHTDM_GREETERS[@]}; _c++)); do
         _greeter="${LIGHTDM_GREETERS[$(( _c - 1 ))]}"
         if [[ "${_greeter}" = "${LIGHTDM_CURRENT_GREETER}" ]]; then
             echo " * ${_c}: ${_greeter}"
@@ -289,7 +289,7 @@ run_greeter_wizard(){
         fi
         unset _greeter
     done
-    echo -n "(1 ~ ${#GREETERS[@]}) > "
+    echo -n "(1 ~ ${#LIGHTDM_GREETERS[@]}) > "
     read _input
 
     local _recall
@@ -302,7 +302,7 @@ run_greeter_wizard(){
     # 回答を解析
     if check_int "${_input}"; then
         # 数字が入力された
-        if (( 1 <= _input)) && (( _input <= ${#GREETERS[@]} )); then
+        if (( 1 <= _input)) && (( _input <= ${#LIGHTDM_GREETERS[@]} )); then
             _greeter="${LIGHTDM_GREETERS[$(( _input - 1 ))]}"
         else
             _recall
@@ -867,15 +867,22 @@ declare -A DISPLAY_MANAGER_CONFIG=(
 
 #== CONFIGS ==#
 
-# LightDM
+# LightDM - 設定ファイル
 LIGHTDM_CONFIG="${DISPLAY_MANAGER_CONFIG["lightdm"]}"
-LIGHTDM_GREETERS_DIR="$(lightdm_get_value "greeters-directory")"
-LIGHTDM_GREETERS=($((ls "${LIGHTDM_GREETERS_DIR}" | sed "s|.desktop$||g") 2> /dev/null ))
-LIGHTDM_CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" | cut -d "=" -f 2)"
 
+# LightDM - Greeterのディレクトリ
+LIGHTDM_GREETERS_DIR="$(lightdm_get_value "greeters-directory")"
 : ${LIGHTDM_GREETERS_DIR:="/usr/share/xgreeters"}
+LIGHTDM_GREETERS_DIR="/ho"
+
+# LightDM - Greeter一覧
+LIGHTDM_GREETERS=( $( (ls "${LIGHTDM_GREETERS_DIR}" | sed "s|.desktop$||g") 2> /dev/null ))
+
+# LightDM - 現在設定されているGreeter
+LIGHTDM_CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" | cut -d "=" -f 2)"
 : ${LIGHTDM_CURRENT_GREETER:="lightdm-gtk-greeter"}
 
+# LightDM - 読み込まれた設定ファイルの一覧
 LIGHTDM_LOADED_CONFIG=(
     $(
         printf "%s\n" $(
