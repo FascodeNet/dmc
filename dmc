@@ -892,7 +892,7 @@ LIGHTDM_CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" |
 LIGHTDM_LOADED_CONFIG=()
 while read -r line; do
     LIGHTDM_LOADED_CONFIG+=("${line}")
-done < <(printf "%s\n" $(lightdm --show-config 2>&1 | grep -x -A "$(lightdm --show-config 2>&1 | wc -l)" "Sources:" | grep -v "Sources") | sed -E "s|^[A-Z]$||g" | tr -d " ")
+done < <(printf "%s\n" "$(lightdm --show-config 2>&1 | grep -x -A "$(lightdm --show-config 2>&1 | wc -l)" "Sources:" | grep -v "Sources" | sed 's|^[A-Z]  ||g')"  | tr -d " ")
 
 # Global
 CURSOR_THEMES=($(get_cursor_theme))
