@@ -155,6 +155,7 @@ get_cursor_theme(){
 
 # GTKテーマの一覧を取得
 get_gtk_theme(){
+    echo "Loading GTK themes..." >&2
     local _dir _find_theme_dir_list=("/usr/share/themes" "${HOME}/.local/share/themes" "${HOME}/.themes")
     for _dir in "${_find_theme_dir_list[@]}"; do
         if [[ -d "${_dir}" ]]; then
@@ -167,6 +168,30 @@ get_gtk_theme(){
     local _theme_name
     for _dir in "${_gtk_theme_dir_list[@]}"; do
         _theme_name="$(crudini --get "${_dir}/index.theme" 'Desktop Entry' "Name" 2> /dev/null ;:)"
+        if [[ -z "${_theme_name}" ]]; then
+            continue
+        else
+            _gtk_theme_name_list+=("${_theme_name}")
+        fi
+    done
+    
+    printf "%s\n" "${_gtk_theme_name_list[@]}" | sort | uniq
+}
+
+get_icon_theme(){
+    echo "Loading icons..." >&2
+    local _dir _find_theme_dir_list=("/usr/share/icons" "${HOME}/.local/share/icons" "${HOME}/.icons")
+    for _dir in "${_find_theme_dir_list[@]}"; do
+        if [[ -d "${_dir}" ]]; then
+            while read -r line; do
+                _icon_theme_dir_list+=("${line}")
+            done < <(find "${_dir}" -type f -name "index.theme" -print0 | xargs -0 -i dirname {} | tr " " "\n" | sort | uniq)
+        fi
+    done
+
+    local _theme_name
+    for _dir in "${_icon_theme_dir_list[@]}"; do
+        _theme_name="$(crudini --get "${_dir}/index.theme" 'Icon Theme' "Name" 2> /dev/null ;:)"
         if [[ -z "${_theme_name}" ]]; then
             continue
         else
@@ -909,6 +934,26 @@ command_slick_theme_wizard(){
     fi
     echo "Changed theme to ${_theme}"
 
+}
+
+command_slick_icon_wizard(){
+    local icons
+    while read -r line; do icons+=("${line}"); done < <(get_icon_theme)
+
+    local _icon
+    echo "Please select the icon theme to use."
+    if ! _icon="$(ask_question "${icons[@]}")"; then
+        command_slick_icon_wizard
+        exit 0
+    fi
+
+    if [[ -n "${_icon}" ]]; then
+        slick_set_config "icon-theme-name" "${_icon}"
+    else
+        command_slick_icon_wizard
+        exit 0
+    fi
+    echo "Changed icon theme to ${_icon}"
 }
 
 
