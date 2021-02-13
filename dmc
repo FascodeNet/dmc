@@ -576,22 +576,23 @@ command_gdm_cursor_wizard(){
 }
 
 command_gdm_sound(){
-    # 引数チェック
-    if ! check_bool "${1-""}"; then
+    local _arg="$(echo "${1-""}" | tr A-Z a-z)"
+    if ! check_bool "${_arg}"; then
         msg_error "Please specify true or false"
         script_usage
         exit 1
     fi
-    gdm_dconf_set_config "org/gnome/desktop/sound" "event-sounds" "${1}"
+    gdm_dconf_set_config "org/gnome/desktop/sound" "event-sounds" "${_arg}"
 }
 
 command_gdm_tap(){
-    if ! check_bool "${1-""}"; then
+    local _arg="$(echo "${1-""}" | tr A-Z a-z)"
+    if ! check_bool "${_arg}"; then
         msg_error "Please specify true or false"
         script_usage
         exit 1
     fi
-    gdm_dconf_set_config "org/gnome/desktop/peripherals/touchpad" "tap-to-click" "${1}"
+    gdm_dconf_set_config "org/gnome/desktop/peripherals/touchpad" "tap-to-click" "${_arg}"
 }
 
 # autologin
@@ -673,12 +674,24 @@ command_gdm_auto_login(){
 
 # accessibility コマンド
 command_gdm_accessibility(){
-    if ! check_bool "${1-""}"; then
+    local _arg="$(echo "${1-""}" | tr A-Z a-z)"
+    if ! check_bool "${_arg}"; then
         msg_error "Please specify true or false"
         script_usage
         exit 1
     fi
-    gdm_dconf_set_config "org/gnome/desktop/interface" "toolkit-accessibility" "${1}"
+    gdm_dconf_set_config "org/gnome/desktop/interface" "toolkit-accessibility" "${_arg}"
+}
+
+# root-login コマンド
+command_gdm_root_login(){
+    local _arg="$(echo "${1-""}" | tr A-Z a-z)"
+    if ! check_bool "${_arg}"; then
+        msg_error "Please specify true or false"
+        script_usage
+        exit 1
+    fi
+    gdm_custom_set_config "daemon" "AllowRoot" "${_arg}"
 }
 
 #== Webkit2用の汎用関数 ==#
@@ -975,6 +988,10 @@ case "${DISPLAY_MANAGER}" in
             "accessibility")
                 gdm_init_configs
                 command_gdm_accessibility ${COMMAND_ARGS}
+                ;;
+            "root-login")
+                gdm_init_configs
+                command_gdm_root_login ${COMMAND_ARGS}
                 ;;
             *)
                 msg_error "Undefined commnad(${COMMAND})"
