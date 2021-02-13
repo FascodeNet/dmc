@@ -829,7 +829,7 @@ qtquick_get_value(){
 
 # command_qtquick_back <key> <value>
 qtquick_set_config(){
-    local _tempfile="/tmp/$(basename "${GREETER_CONFIG["lightdm-qtquick-greeter"]}")-$(cat /dev/urandom | base64 | fold -w 10 | head -n 1)"
+    local _tempfile="/tmp/$(basename "${GREETER_CONFIG["lightdm-qtquick-greeter"]}")-$(base64 < "/dev/urandom" | fold -w 10 | head -n 1)"
     cp "${GREETER_CONFIG["lightdm-qtquick-greeter"]}" "${_tempfile}"
     #cat "${_tempfile}" | jq -r ".${1}|=\"${2}\"" > "${GREETER_CONFIG["lightdm-qtquick-greeter"]}"
     jq -r ".${1}|=\"${2}\"" < "${_tempfile}" > "${GREETER_CONFIG["lightdm-qtquick-greeter"]}"
