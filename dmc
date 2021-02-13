@@ -277,6 +277,12 @@ command_lightdm_greeter_list() {
 
 # greeterコマンド
 run_greeter_wizard(){
+    # グリーターの数を確認
+    if (( ${#LIGHTDM_GREETERS[@]} < 1 )); then
+        msg_error "LightDM Greeter was not found."
+        exit 1
+    fi
+
     # 質問する
     local _c _greeter
     echo "Please select the greeter to use."
@@ -873,7 +879,6 @@ LIGHTDM_CONFIG="${DISPLAY_MANAGER_CONFIG["lightdm"]}"
 # LightDM - Greeterのディレクトリ
 LIGHTDM_GREETERS_DIR="$(lightdm_get_value "greeters-directory")"
 : ${LIGHTDM_GREETERS_DIR:="/usr/share/xgreeters"}
-LIGHTDM_GREETERS_DIR="/ho"
 
 # LightDM - Greeter一覧
 LIGHTDM_GREETERS=( $( (ls "${LIGHTDM_GREETERS_DIR}" | sed "s|.desktop$||g") 2> /dev/null ))
