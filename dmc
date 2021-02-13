@@ -110,7 +110,7 @@ wrapper(){
     local _command="${1}"
     shift 1
     if which "${_command}" >/dev/null 2>&1; then
-        $(which "${_command}") ${@}
+        $(which "${_command}") ${*}
     else
         msg_error "${_command} was not found"
         exit 1
@@ -118,11 +118,11 @@ wrapper(){
 }
 
 crudini(){
-    wrapper crudini ${@}
+    wrapper crudini ${*}
 }
 
 jq(){
-    wrapper jq ${@}
+    wrapper jq ${*}
 }
 
 
@@ -133,14 +133,14 @@ get_cursor_theme(){
     # 参考: https://wiki.archlinux.jp/index.php/GDM
     #echo "Searching cursor themes..." 1>&2
     local _dir _cursor_theme_dir_list _find_cursor_dir_list=("/usr/share/icons" "${HOME}/.local/share/icons" "${HOME}/.icons")
-    for _dir in ${_find_cursor_dir_list[@]}; do
+    for _dir in "${_find_cursor_dir_list[@]}"; do
         if [[ -d "${_dir}" ]]; then
             _cursor_theme_dir_list=($(find "${_dir}" -type d -name "cursors" | xargs -i dirname {} | sort))
         fi
     done
     
     local _cursor_theme _cursor_theme_name _temp
-    for _cursor_theme in ${_cursor_theme_dir_list[@]}; do
+    for _cursor_theme in "${_cursor_theme_dir_list[@]}"; do
         _temp+=("$(cat "${_cursor_theme}/cursor.theme" 2> /dev/null | grep -E "^Name=" | sed "s|^Name=||g")")
         if [[ -z "${_temp}" ]]; then
             _cursor_theme_name+=("$(basename "${_cursor_theme}")")
@@ -266,7 +266,7 @@ EOF
 command_lightdm_greeter_list() {
     echo "Available Lightdm greeter list:"
     local _greeter
-    for _greeter in ${LIGHTDM_GREETERS[@]}; do
+    for _greeter in "${LIGHTDM_GREETERS[@]}"; do
         if [[ "${_greeter}" = "${LIGHTDM_CURRENT_GREETER}" ]]; then
             echo " * ${_greeter}"
         else
