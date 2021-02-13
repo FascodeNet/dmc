@@ -852,7 +852,7 @@ slick_set_config(){
 
 slick_init_configs(){
     check_root
-    if [[ -f "${GREETER_CONFIG["lightdm-slick-greeter"]}" ]]; then
+    if [[ ! -f "${GREETER_CONFIG["lightdm-slick-greeter"]}" ]]; then
         mkdir -p "$(dirname "${GREETER_CONFIG["lightdm-slick-greeter"]}")"
         touch "${GREETER_CONFIG["lightdm-slick-greeter"]}"
         echo "[Greeter]" > "${GREETER_CONFIG["lightdm-slick-greeter"]}"
@@ -902,8 +902,7 @@ command_slick_theme_wizard(){
 
     # 結果に応じて処理を実行
     if [[ -n "${_theme}" ]]; then
-        :
-        # ここでテーマ適用を実行
+        slick_set_config "theme-name" "${_theme}"
     else
         command_slick_theme_wizard
         exit 0
