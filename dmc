@@ -904,11 +904,15 @@ while read -r line; do
     LIGHTDM_LOADED_CONFIG+=("${line}")
 done < <(printf "%s\n" "$(lightdm --show-config 2>&1 | grep -x -A "$(lightdm --show-config 2>&1 | wc -l)" "Sources:" | grep -v "Sources" | sed 's|^[A-Z]  ||g')"  | tr -d " ")
 
-# Global
+# Global - カーソルテーマの一覧
 while read -r line; do CURSOR_THEMES+=("${line}"); done < <(get_cursor_theme)
 
+# Global - エディタ
 USE_EDITOR="${EDITOR:-vi}"
-DISPLAY_MANAGER="lightdm"
+
+# モード
+DISPLAY_MANAGER="$(basename "$(readlink "/etc/systemd/system/display-manager.service")" | sed "s|.service$||g")"
+: "${DISPLAY_MANAGER:="lightdm"}"
 
 # dmc config
 NON_INTERACTIVE=false
