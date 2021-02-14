@@ -229,6 +229,7 @@ ask_question(){
         case "${arg}" in
             d) _default="${OPTARG}" ;;
             p) _question="${OPTARG}" ;;
+            *) exit 1 ;;
         esac
     done
     shift $((OPTIND - 1))
