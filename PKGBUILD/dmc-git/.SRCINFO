@@ -10,6 +10,8 @@ pkgbase = dmc-git
 	depends = vi
 	depends = util-linux
 	depends = crudini
+	provides = dmc
+	conflicts = dmc
 	source = git+https://github.com/FascodeNet/dmc.git
 	md5sums = SKIP
 

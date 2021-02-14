@@ -12,6 +12,8 @@ depends=('bash' "vi" "util-linux" "crudini")
 makedepends=('git')
 source=("git+https://github.com/FascodeNet/dmc.git")
 md5sums=('SKIP')
+provides=("dmc")
+conflicts=("dmc")
 
 pkgver() {
   cd "${reponame}"
