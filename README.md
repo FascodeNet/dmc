@@ -12,6 +12,13 @@ Tested only on Arch Linux
 - util-linux
 - crudini
 
+## Supported Display manager and Greeter
+- LightDM
+- GDM
+- LightDM Qtquick Greeter
+- LightDM Slick Greeter
+- LightDM Webkit2 Greeter
+
 ## Warning
 This tool is currently under development.  
 Be sure to make a backup before using it as the configuration file may be damaged.
