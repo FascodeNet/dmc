@@ -213,17 +213,35 @@ get_icon_theme(){
 }
 
 # 質問を行う関数
-# ask_question -d <デフォルト値> <選択肢1> <選択肢2> ...
+# Returns only the selected result to standard output
+# ask_question -d <デフォルト値> -p <質問文> <選択肢1> <選択肢2> ...
 ask_question(){
     local arg OPTARG OPTIND
-    local _default="" _choice_list _count _choice
-    while getopts "d:" arg; do
+    local _default="" _choice_list _count _choice _question
+    while getopts "d:p:" arg; do
         case "${arg}" in
-            d)  _default="${OPTARG}" ;;
+            d) _default="${OPTARG}" ;;
+            p) _question="${OPTARG}" ;;
         esac
     done
     shift $((OPTIND - 1))
     _choice_list=("${@}")
+
+    # 選択肢に関するエラー
+    if (( ${#_choice_list[@]} < 0 )); then
+        msg_error "An exception error has occurred."
+        exit 1
+    fi
+
+    # 選択肢が1つしか無いならばそのまま値を返す
+    if (( ${#_choice_list[@]} <= 1 )); then
+        echo "${_choice_list[*]}"
+        return 0
+    fi
+
+    if [[ -v _question ]] && [[ ! "${_question}" = "" ]]; then
+        echo -e "${_question}" >&2
+    fi
 
     for (( _count=1; _count<=${#_choice_list[@]}; _count++)); do
         _choice="${_choice_list[$(( _count - 1 ))]}"
@@ -422,8 +440,7 @@ run_greeter_wizard(){
 
     # 質問する
     local _c _greeter
-    echo "Please select the greeter to use."
-    if ! _greeter="$(ask_question -d "${LIGHTDM_CURRENT_GREETER}" "${LIGHTDM_GREETERS[@]}")"; then
+    if ! _greeter="$(ask_question -p "Please select the greeter to use." -d "${LIGHTDM_CURRENT_GREETER}" "${LIGHTDM_GREETERS[@]}")"; then
         run_greeter_wizard
         exit 0
     fi
@@ -435,7 +452,10 @@ run_greeter_wizard(){
         run_greeter_wizard
         exit 0
     fi
-    echo "Changed greeter to ${_greeter}"
+
+    if [[ ! "${LIGHTDM_CURRENT_GREETER}" = "${_greeter}" ]]; then
+        echo "Changed greeter to ${_greeter}"
+    fi
 }
 
 # removeコマンド
@@ -606,7 +626,7 @@ gdm_dconf_set_config(){
 
 # gdm_dconf_get_value <dconf path> <key>
 gdm_dconf_get_value(){
-    dconf dump / | crudini --get - "${1}" "${2}"
+    dconf dump / | crudini --get - "${1}" "${2}" 2> /dev/null
 }
 
 # gdm_custom_get_value <section> <key>
@@ -650,14 +670,13 @@ command_gdm_logo(){
 
 command_gdm_cursor_wizard(){
     # カーソル一覧を取得
-    local cursor_themes
+    local cursor_themes _current_theme="$(gdm_dconf_get_value "org/gnome/desktop/interface" "cursor-theme")"
     while read -r line; do cursor_themes+=("${line}"); done < <(get_cursor_theme)
 
     # 一覧を生成
     local _c
     unset _cursor_theme
-    echo "Please select the cursor theme to use."
-    if ! _cursor_theme="$(ask_question "${cursor_themes[@]}")"; then
+    if ! _cursor_theme="$(ask_question -d "${_current_theme}" -p "Please select the cursor theme to use." "${cursor_themes[@]}")"; then
         run_greeter_wizard
         exit 0
     fi
@@ -668,7 +687,10 @@ command_gdm_cursor_wizard(){
         command_gdm_cursor_wizard
         exit 0
     fi
-    echo "Changed cursor to ${_cursor_theme}"
+
+    if [[ ! "${_current_theme}" = "${_cursor_theme}" ]]; then
+        echo "Changed cursor to ${_cursor_theme}"
+    fi
 }
 
 command_gdm_cursor_change(){
@@ -832,8 +854,7 @@ command_webkit2_theme_wizard(){
 
     local _current_theme=$(webkit2_get_value greeter webkit_theme | sed "s|\"||g")
     local _theme _c
-    echo "Please select the theme to use." _theme_list
-    if ! _theme="$(ask_question -d "${_current_theme}" "${_theme_list[@]}")"; then
+    if ! _theme="$(ask_question -d "${_current_theme}" -p "Please select the theme to use." "${_theme_list[@]}")"; then
         run_greeter_wizard
         exit 0
     fi
@@ -1023,7 +1044,7 @@ LIGHTDM_GREETERS_DIR="$(lightdm_get_value "greeters-directory")"
 #LIGHTDM_GREETERS=( $( )
 while read -r line; do
     LIGHTDM_GREETERS+=("${line}")
-done < <( (find "${LIGHTDM_GREETERS_DIR}" -print0 -type f | xargs -0 -i basename {} | sed "s|.desktop$||g" | grep -xv "xgreeters") 2> /dev/null )
+done < <( (find "${LIGHTDM_GREETERS_DIR}" -print0 -type f | xargs -0 -i basename {} | grep -E ".desktop$" | sed "s|.desktop$||g" | grep -xv "xgreeters") 2> /dev/null )
 
 # LightDM - 現在設定されているGreeter
 LIGHTDM_CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" | cut -d "=" -f 2)"
