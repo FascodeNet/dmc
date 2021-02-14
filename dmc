@@ -1058,15 +1058,21 @@ done < <(printf "%s\n" "$(lightdm --show-config 2>&1 | grep -x -A "$(lightdm --s
 # Global - エディタ
 USE_EDITOR="${EDITOR:-vi}"
 
+# Global - 現在のディスプレイマネージャ名
+CURRENT_DM="$(basename "$(readlink "/etc/systemd/system/display-manager.service")" | sed "s|.service$||g")"
+
 # モード
-DISPLAY_MANAGER="$(basename "$(readlink "/etc/systemd/system/display-manager.service")" | sed "s|.service$||g")"
+DISPLAY_MANAGER="${CURRENT_DM}"
 : "${DISPLAY_MANAGER:="lightdm"}"
 
 # dmc config
 NON_INTERACTIVE=false
 WRITE_ALL_FILES=false
 NOROOT=false
+MODE_SPECIFIED=false
 
+SUPPORTED_GREETERS=("webkit2" "qtquick" "slick")
+SUPPORTED_DM=("gdm" "lightdm")
 
 #== 引数解析 ==#
 ARGUMENT="${*}"
@@ -1113,6 +1119,7 @@ while true; do
     esac
 done
 
+# コマンドの引数を解析
 COMMAND="${1:-null}"
 if (( "${#}" >= 1 )); then
     shift 1
@@ -1125,6 +1132,7 @@ if [[ "${COMMAND}" = "null" ]]; then
     exit 1
 fi
 
+# コマンドとモードに応じて関数を実行する
 case "${DISPLAY_MANAGER}" in
     "lightdm")
         case "${COMMAND}" in
