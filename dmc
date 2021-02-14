@@ -136,7 +136,6 @@ jq(){
 }
 
 check_command_dm(){
-    local _dm
     if ! printf "%s\n" "${@}" | grep -xE "${DISPLAY_MANAGER}" >/dev/null 2>&1; then
         msg_error "This command (${COMMAND}) is not available in the current mode (${DISPLAY_MANAGER})."
         exit 1
@@ -443,7 +442,7 @@ run_greeter_wizard(){
     fi
 
     # 質問する
-    local _c _greeter
+    local _greeter
     if ! _greeter="$(ask_question -p "Please select the greeter to use." -d "${LIGHTDM_CURRENT_GREETER}" "${LIGHTDM_GREETERS[@]}")"; then
         run_greeter_wizard
         exit 0
@@ -678,8 +677,6 @@ command_gdm_cursor_wizard(){
     while read -r line; do cursor_themes+=("${line}"); done < <(get_cursor_theme)
 
     # 一覧を生成
-    local _c
-    unset _cursor_theme
     if ! _cursor_theme="$(ask_question -d "${_current_theme}" -p "Please select the cursor theme to use." "${cursor_themes[@]}")"; then
         run_greeter_wizard
         exit 0
@@ -853,7 +850,7 @@ command_webkit2_theme_wizard(){
     done < <(ls /usr/share/lightdm-webkit/themes)
 
     local _current_theme=$(webkit2_get_value greeter webkit_theme | sed "s|\"||g")
-    local _theme _c
+    local _theme
     if ! _theme="$(ask_question -d "${_current_theme}" -p "Please select the theme to use." "${_theme_list[@]}")"; then
         run_greeter_wizard
         exit 0
@@ -1068,10 +1065,6 @@ DISPLAY_MANAGER="${CURRENT_DM}"
 NON_INTERACTIVE=false
 WRITE_ALL_FILES=false
 NOROOT=false
-MODE_SPECIFIED=false
-
-SUPPORTED_GREETERS=("webkit2" "qtquick" "slick")
-SUPPORTED_DM=("gdm" "lightdm")
 
 #== 引数解析 ==#
 ARGUMENT="${*}"
