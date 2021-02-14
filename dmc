@@ -626,7 +626,7 @@ gdm_dconf_set_config(){
 
 # gdm_dconf_get_value <dconf path> <key>
 gdm_dconf_get_value(){
-    dconf dump / | crudini --get - "${1}" "${2}" 2> /dev/null
+    find "/etc/dconf/db/gdm.d/" -type f -print0 | xargs -0i cat {} | crudini --get - "${1}" "${2}" | sed "s|^[\"\']||g" | sed "s|[\"\']$||g"
 }
 
 # gdm_custom_get_value <section> <key>
