@@ -257,6 +257,35 @@ ask_question(){
     return 0
 }
 
+# MIMEファイルタイプを返す
+# get_filetype <file>
+get_filetype(){
+    file -inb "${1}" | cut -d ";" -f 1
+}
+
+# MIMEファイルタイプを判別する
+# 
+# check_filetype <ファイルタイプ> <ファイルパス>
+check_filetype(){
+    local _type="${1}" _path="${2}"
+
+    # ファイルタイプに/が含まれているかどうか
+    if echo "${_type}" | grep -E "^.+/.+$" >/dev/null 2<&1; then
+        # 含まれていたらファイルタイプを完全一致で判定する\
+        if [[ "${_type}" = "$(get_filetype "${_path}")" ]]; then
+            return 0
+        fi
+    else
+        # 含まれていなかったらファイルタイプをメインタイプのみで判定する
+        if [[ "${_type}" = "$(get_filetype "${_path}" | cut -d "/" -f 1 )" ]]; then
+            return 0
+        fi
+    fi
+    # 正常終了しなかったので異常終了
+    return 1
+}
+
+
 #== LightDM用の汎用関数 ==#
 # キーが設定されている設定ファイル
 lightdm_get_source_file(){
