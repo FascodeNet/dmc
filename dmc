@@ -135,6 +135,13 @@ jq(){
     wrapper jq "${@}"
 }
 
+check_command_dm(){
+    local _dm
+    if ! printf "%s\n" "${@}" | grep -xE "${DISPLAY_MANAGER}" >/dev/null 2>&1; then
+        msg_error "This command (${COMMAND}) is not available in the current mode (${DISPLAY_MANAGER})."
+        exit 1
+    fi
+}
 
 # カーソルテーマの一覧を取得
 get_cursor_theme(){
@@ -370,7 +377,6 @@ command_lightdm_greeter_change() {
     # 引数チェック
     if [[ -z "${1}" ]] || [[ "${1}" = "" ]]; then
         msg_error "Please specify Greeter."
-        script_usage
         exit 1
     fi
 
@@ -387,17 +393,14 @@ command_lightdm_greeter_change() {
 command_lightdm_greeter_create(){
     if [[ -z "${1}" ]] || [[ "${1}" = "" ]]; then
         msg_error "Please specify Greeter."
-        script_usage
         exit 1
     fi
     if [[ ! -f "${1}" ]]; then
         msg_error "${1} does not exist."
-        script_usage
         exit 1
     fi
     if [[ ! -x "${1}" ]]; then
         msg_error "hoge is not an executable file."
-        script_usage
         exit 1
     fi
 
@@ -711,7 +714,6 @@ command_gdm_sound(){
     local _arg="$(echo "${1-""}" | tr "[:upper:]" "[:lower:]")"
     if ! check_bool "${_arg}"; then
         msg_error "Please specify true or false"
-        script_usage
         exit 1
     fi
     gdm_dconf_set_config "org/gnome/desktop/sound" "event-sounds" "${_arg}"
@@ -721,7 +723,6 @@ command_gdm_tap(){
     local _arg="$(echo "${1-""}" | tr "[:upper:]" "[:lower:]")"
     if ! check_bool "${_arg}"; then
         msg_error "Please specify true or false"
-        script_usage
         exit 1
     fi
     gdm_dconf_set_config "org/gnome/desktop/peripherals/touchpad" "tap-to-click" "${_arg}"
@@ -809,7 +810,6 @@ command_gdm_accessibility(){
     local _arg="$(echo "${1-""}" | tr "[:upper:]" "[:lower:]")"
     if ! check_bool "${_arg}"; then
         msg_error "Please specify true or false"
-        script_usage
         exit 1
     fi
     gdm_dconf_set_config "org/gnome/desktop/interface" "toolkit-accessibility" "${_arg}"
@@ -820,7 +820,6 @@ command_gdm_root_login(){
     local _arg="$(echo "${1-""}" | tr "[:upper:]" "[:lower:]")"
     if ! check_bool "${_arg}"; then
         msg_error "Please specify true or false"
-        script_usage
         exit 1
     fi
     gdm_custom_set_config "daemon" "AllowRoot" "${_arg}"
@@ -948,7 +947,6 @@ command_slick_grid(){
     local _arg="$(echo "${1-""}" | tr "[:upper:]" "[:lower:]")"
     if ! check_bool "${_arg}"; then
         msg_error "Please specify true or false"
-        script_usage
         exit 1
     fi
     slick_set_config "draw-grid" "${_arg}"
@@ -1133,141 +1131,155 @@ if [[ "${COMMAND}" = "null" ]]; then
 fi
 
 # コマンドとモードに応じて関数を実行する
-case "${DISPLAY_MANAGER}" in
-    "lightdm")
-        case "${COMMAND}" in
-            "autologin")
+case "${COMMAND}" in
+    "autologin")
+        check_command_dm "lightdm" "gdm"
+        case "${DISPLAY_MANAGER}" in
+            "lightdm")
                 lightdm_init_configs
                 command_lightdm_auto_login "${COMMAND_ARGS}"
                 ;;
-            "greeter")
-                lightdm_init_configs
-                run_greeter_wizard
-                ;;
-            "greeter-change")
-                lightdm_init_configs
-                command_lightdm_greeter_change "${COMMAND_ARGS}"
-                ;;
-            "greeter-create")
-                lightdm_init_configs
-                command_lightdm_greeter_create "${COMMAND_ARGS}"
-                ;;
-            "greeter-list")
-                command_lightdm_greeter_list
-                ;;
-            "greeter-edit")
-                check_root
-                command_lightdm_greeter_edit "${COMMAND_ARGS}"
-                ;;
-            "remove")
-                check_root
-                command_lightdm_remove
-                ;;
-            "edit")
-                check_root
-                command_lightdm_edit
-                ;;
-            "show-config")
-                command_lightdm_show_config
-                ;;
-            *)
-                msg_error "Undefined commnad(${COMMAND})"
-                ;;
-        esac
-        ;;
-    "gdm")
-        case "${COMMAND}" in
-            "autologin")
+            "gdm")
                 gdm_init_configs
                 command_gdm_auto_login "${COMMAND_ARGS}"
                 ;;
-            "cursor")
-                gdm_init_configs
-                command_gdm_cursor_wizard
-                ;;
-            "cursor-change")
-                gdm_init_configs
-                command_gdm_cursor_change "${COMMAND_ARGS}"
-                ;;
-            "sound")
-                gdm_init_configs
-                command_gdm_sound "${COMMAND_ARGS}"
-                ;;
-            "logo")
+            +)
+
+        esac
+        ;;
+    "greeter")
+        check_command_dm "lightdm"
+        lightdm_init_configs
+        run_greeter_wizard
+        ;;
+    "greeter-change")
+        check_command_dm "lightdm"
+        lightdm_init_configs
+        command_lightdm_greeter_change "${COMMAND_ARGS}"
+        ;;
+    "greeter-create")
+        check_command_dm "lightdm"
+        lightdm_init_configs
+        command_lightdm_greeter_create "${COMMAND_ARGS}"
+        ;;
+    "greeter-list")
+        check_command_dm "lightdm"
+        command_lightdm_greeter_list
+        ;;
+    "greeter-edit")
+        check_command_dm "lightdm"
+        check_root
+        command_lightdm_greeter_edit "${COMMAND_ARGS}"
+        ;;
+    "remove")
+        check_command_dm "lightdm"
+        check_root
+        command_lightdm_remove
+        ;;
+    "edit")
+        check_command_dm "lightdm"
+        check_root
+        command_lightdm_edit
+        ;;
+    "show-config")
+        check_command_dm "lightdm"
+        command_lightdm_show_config
+        ;;
+    "cursor")
+        check_command_dm "gdm"
+        gdm_init_configs
+        command_gdm_cursor_wizard
+        ;;
+    "cursor-change")
+        check_command_dm "gdm"
+        gdm_init_configs
+        command_gdm_cursor_change "${COMMAND_ARGS}"
+        ;;
+    "sound")
+        check_command_dm "gdm"
+        gdm_init_configs
+        command_gdm_sound "${COMMAND_ARGS}"
+        ;;
+    "logo")
+        check_command_dm "gdm" "slick"
+        case "${DISPLAY_MANAGER}" in
+            "gdm")
                 gdm_init_configs
                 command_gdm_logo "${COMMAND_ARGS}"
                 ;;
-            "tap")
-                gdm_init_configs
-                command_gdm_tap "${COMMAND_ARGS}"
-                ;;
-            "accessibility")
-                gdm_init_configs
-                command_gdm_accessibility "${COMMAND_ARGS}"
-                ;;
-            "root-login")
-                gdm_init_configs
-                command_gdm_root_login "${COMMAND_ARGS}"
-                ;;
-            *)
-                msg_error "Undefined commnad(${COMMAND})"
-                ;;
-        esac
-        ;;
-    "webkit2")
-        case "${COMMAND}" in
-            "theme")
-                webkit2_init_configs
-                command_webkit2_theme_wizard
-                ;;
-            "theme-change")
-                webkit2_init_configs
-                command_webkit2_theme_change "${COMMAND_ARGS}"
-                ;;
-            *)
-                msg_error "Undefined commnad(${COMMAND})"
-                ;;
-        esac
-        ;;
-    "qtquick")
-        case "${COMMAND}" in
-            "back")
-                qtquick_init_configs
-                command_qtquick_back "${COMMAND_ARGS}"
-                ;;
-        esac
-        ;;
-    "slick")
-        case "${COMMAND}" in
-            "back")
-                slick_init_configs
-                command_slick_back "${COMMAND_ARGS}"
-                ;;
-            "grid")
-                slick_init_configs
-                command_slick_grid "${COMMAND_ARGS}"
-                ;;
-            "icon")
-                slick_init_configs
-                command_slick_icon_wizard
-                ;;
-            "theme")
-                slick_init_configs
-                command_slick_theme_wizard
-                ;;
-            "other-monitor")
-                slick_init_configs
-                command_slick_other_monitor "${COMMAND_ARGS}"
-                ;;
-            "logo")
+            "slick")
                 slick_init_configs
                 command_slick_logo "${COMMAND_ARGS}"
                 ;;
         esac
         ;;
-    *)
-        msg_error "A display manager that is not currently supported."
-        exit 1
+    "tap")
+        check_command_dm "gdm"
+        gdm_init_configs
+        command_gdm_tap "${COMMAND_ARGS}"
+        ;;
+    "accessibility")
+        check_command_dm "gdm"
+        gdm_init_configs
+        command_gdm_accessibility "${COMMAND_ARGS}"
+        ;;
+    "root-login")
+        check_command_dm "gdm"
+        gdm_init_configs
+        command_gdm_root_login "${COMMAND_ARGS}"
+        ;;
+    "theme")
+        check_command_dm "webkit2" "slick"
+        case "${DISPLAY_MANAGER}" in
+            "webkit2")
+                webkit2_init_configs
+                command_webkit2_theme_wizard
+                ;;
+            "slick")
+                slick_init_configs
+                command_slick_theme_wizard
+                ;;
+        esac
+        ;;
+    "theme-change")
+        check_command_dm "webkit2" "slick"
+        case "${DISPLAY_MANAGER}" in
+            "webkit2")
+                webkit2_init_configs
+                command_webkit2_theme_change "${COMMAND_ARGS}"
+                ;;
+            "slick")
+                msg_error "Not yet implemented."
+                exit 1
+                ;;
+        esac
+        ;;
+    "back")
+        check_command_dm "qtquick" "slick"
+        case "${DISPLAY_MANAGER}" in
+            "qtquick")
+                qtquick_init_configs
+                command_qtquick_back "${COMMAND_ARGS}"
+                ;;
+            "slick")
+                slick_init_configs
+                command_slick_back "${COMMAND_ARGS}"
+                ;;
+        esac
+        ;;
+    "grid")
+        check_command_dm "slick"
+        slick_init_configs
+        command_slick_grid "${COMMAND_ARGS}"
+        ;;
+    "icon")
+        check_command_dm "slick"
+        slick_init_configs
+        command_slick_icon_wizard
+        ;;
+    "other-monitor")
+        check_command_dm "slick"
+        slick_init_configs
+        command_slick_other_monitor "${COMMAND_ARGS}"
         ;;
 esac
-exit 0
