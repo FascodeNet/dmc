@@ -230,6 +230,14 @@ get_icon_theme(){
     printf "%s\n" "${_gtk_theme_name_list[@]}" | sort | uniq
 }
 
+get_xorg_session(){
+    find "/usr/share/xsessions" -type f -name "*.desktop" | xargs -I{} bash -c 'basename {} | sed "s|.desktop||g"'
+}
+
+get_wayland_session(){
+    find "/usr/share/wayland-sessions" -type f -name "*.desktop" | xargs -I{} bash -c 'basename {} | sed "s|.desktop||g"'
+}
+
 # 質問を行う関数
 # Returns only the selected result to standard output
 # ask_question -d <デフォルト値> -p <質問文> <選択肢1> <選択肢2> ...
@@ -292,6 +300,62 @@ ask_question(){
     fi
     echo "${_choice}"
     return 0
+}
+
+# デスクトップセッションを聞く
+ask_session(){
+    local _session
+    if (( $(get_xorg_session | wc -l) <= 1 )); then
+        _session="$(get_xorg_session)"
+    elif [[ "${NON_INTERACTIVE}" = true ]]; then
+        # 非対話モード
+        # ~/.dmrcの値を設定します
+        _session="$(grep -E '^Session=' "${HOME}/.dmrc" 2> /dev/null | cut -d '=' -f 2)"
+        if [[ -z "${autologin_session}" ]]; then
+            msg_error "Failed to set the session."
+            msg_error "Not specified and ~/.dmrc does not exist either."
+            exit 1
+        fi
+    else
+        while read -r line; do
+            _session_list+=("${line}")
+        done < <(get_xorg_session)
+        if ! session="$(ask_question -p "Select the desktop session to autologin" "${_session_list[@]}")"; then
+            msg_error "Please enter the correct session name."
+            exit 1
+        fi
+        if [[ -f "/usr/share/xsessions/${session}.desktop" ]]; then
+            _session="${session}"
+        else
+            msg_error "Please enter the correct session name."
+            exit 1
+        fi
+    fi
+    echo "${_session}"
+}
+
+# セッションが利用可能かどうか確認する
+# check_session <session>
+check_session(){
+    if [[ ! -f "/usr/share/xsessions/${1}.desktop" ]]; then
+        # 存在しないセッションが指定された場合
+        msg_error "This is a session (${1}) that does not exist."
+        exit 1
+    fi
+}
+
+# ユーザーをグループに追加する
+# add_user_to_group <user> <group>
+add_user_to_group(){
+    if ! getent passwd "${1}" 1> /dev/null 2>&1; then
+        echo "${1} is a non-existent user."
+        exit 1
+    fi
+
+    if ! getent group "${2}" 1> /dev/null 2>&1; then
+        LANG=C groupadd -r "${2}"
+    fi
+    LANG=C gpasswd -a "${1}" "${2}"
 }
 
 # MIMEファイルタイプを返す
@@ -545,54 +609,16 @@ command_lightdm_auto_login(){
             autologin_session="${2}"
         fi
 
-        # ユーザーチェック
-        if ! getent passwd "${autologin_user}" 1> /dev/null 2>&1; then
-            echo "${autologin_user} is a non-existent user."
-            exit 1
-        fi
-
-        # セッションを設定
+        # セッションを設定 (WayLandのセッションは現在サポートされていません)
         if [[ -z "${autologin_session+SET}" ]]; then
-            if (( $(find "/usr/share/xsessions" -print0 -type f 2> /dev/null | xargs -0 -i basename {} | wc -l) <= 1 )); then
-                autologin_session="$(find "/usr/share/xsessions" -print0 -type f 2> /dev/null | xargs -0 -i basename {} | sed 's|.desktop$||g')"
-            elif [[ "${NON_INTERACTIVE}" = true ]]; then
-                # 非対話モード
-                # ~/.dmrcの値を設定します
-                autologin_session="$(grep -E '^Session=' "${HOME}/.dmrc" 2> /dev/null | cut -d '=' -f 2)"
-                if [[ -z "${autologin_session}" ]]; then
-                    msg_error "Failed to set the session."
-                    msg_error "Not specified and ~/.dmrc does not exist either."
-                    exit 1
-                fi
-            else
-                echo "Select the desktop session to autologin"
-                local session
-                for session in "/usr/share/xsessions/"*; do
-                    echo "   ${session}"
-                done
-                echo -n "(session name) > "
-                read -r session
-                if [[ -f "/usr/share/xsessions/${session}.desktop" ]]; then
-                    autologin_session="${session}"
-                else
-                    msg_error "Please enter the correct session name."
-                    exit 1
-                fi
-            fi
+            autologin_session="$(ask_session)"
         else
             # 既に値が設定済み
-            if [[ ! -f "/usr/share/xsessions/${autologin_session}.desktop" ]]; then
-                # 存在しないセッションが指定された場合
-                msg_error "This is a session (${autologin_session}) that does not exist."
-                exit 1
-            fi
+            check_session "${autologin_session}"
         fi
 
         # autologin グループを設定
-        if ! getent group "autologin" 1> /dev/null 2>&1; then
-            LANG=C groupadd -r "autologin"
-        fi
-        LANG=C gpasswd -a "${autologin_user}" "autologin"
+        add_user_to_group "${autologin_user}" "autologin"
 
         # 設定を書き込み
         lightdm_set_config "autologin-guest" "false"
@@ -753,54 +779,16 @@ command_gdm_auto_login(){
             autologin_session="${2}"
         fi
 
-        # ユーザーチェック
-        if ! getent passwd "${autologin_user}" 1> /dev/null 2>&1; then
-            echo "${autologin_user} is a non-existent user."
-            exit 1
-        fi
-
         # セッションを設定 (WayLandのセッションは現在サポートされていません)
         if [[ -z "${autologin_session+SET}" ]]; then
-            if (( $(find "/usr/share/xsessions" -print0 -type f 2> /dev/null | xargs -0 -i basename {} | wc -l) <= 1 )); then
-                autologin_session="$(find "/usr/share/xsessions" -print0 -type f 2> /dev/null | xargs -0 -i basename {} | sed 's|.desktop$||g')"
-            elif [[ "${NON_INTERACTIVE}" = true ]]; then
-                # 非対話モード
-                # ~/.dmrcの値を設定します
-                autologin_session="$(grep -E '^Session=' "${HOME}/.dmrc" 2> /dev/null | cut -d '=' -f 2)"
-                if [[ -z "${autologin_session}" ]]; then
-                    msg_error "Failed to set the session."
-                    msg_error "Not specified and ~/.dmrc does not exist either."
-                    exit 1
-                fi
-            else
-                echo "Select the desktop session to autologin"
-                local session
-                for session in "/usr/share/xsessions/"*; do
-                    echo "   $(basename "${session}" | sed "s|.desktop$||g")"
-                done
-                echo -n "(session name) > "
-                read -r session
-                if [[ -f "/usr/share/xsessions/${session}.desktop" ]]; then
-                    autologin_session="${session}"
-                else
-                    msg_error "Please enter the correct session name."
-                    exit 1
-                fi
-            fi
+            autologin_session="$(ask_session)"
         else
             # 既に値が設定済み
-            if [[ ! -f "/usr/share/xsessions/${autologin_session}.desktop" ]]; then
-                # 存在しないセッションが指定された場合
-                msg_error "This is a session (${autologin_session}) that does not exist."
-                exit 1
-            fi
+            check_session "${autologin_session}"
         fi
 
         # autologin グループを設定
-        if ! getent group "autologin" 1> /dev/null 2>&1; then
-            LANG=C groupadd -r "autologin"
-        fi
-        LANG=C gpasswd -a "${autologin_user}" "autologin"
+        add_user_to_group "${autologin_user}" "autologin"
 
         # 設定を書き込み
         gdm_custom_set_config "daemon" "AutomaticLoginEnable" "True"
@@ -1063,55 +1051,16 @@ command_sddm_auto_login(){
             autologin_session="${2}"
         fi
 
-        # ユーザーチェック
-        if ! getent passwd "${autologin_user}" 1> /dev/null 2>&1; then
-            echo "${autologin_user} is a non-existent user."
-            exit 1
-        fi
-
         # セッションを設定 (WayLandのセッションは現在サポートされていません)
         if [[ -z "${autologin_session+SET}" ]]; then
-            if (( $(find "/usr/share/xsessions" -print0 -type f 2> /dev/null | xargs -0 -i basename {} | wc -l) <= 1 )); then
-                autologin_session="$(find "/usr/share/xsessions" -print0 -type f 2> /dev/null | xargs -0 -i basename {} | sed 's|.desktop$||g')"
-            elif [[ "${NON_INTERACTIVE}" = true ]]; then
-                # 非対話モード
-                # ~/.dmrcの値を設定します
-                autologin_session="$(grep -E '^Session=' "${HOME}/.dmrc" 2> /dev/null | cut -d '=' -f 2)"
-                if [[ -z "${autologin_session}" ]]; then
-                    msg_error "Failed to set the session."
-                    msg_error "Not specified and ~/.dmrc does not exist either."
-                    exit 1
-                fi
-            else
-                while read -r line; do
-                    _session_list+=("${line}")
-                done < <(find "/usr/share/xsessions" -type f -name "*.desktop" | xargs -I{} bash -c 'basename {} | sed "s|.desktop||g"')
-                if ! session="$(ask_question -p "Select the desktop session to autologin" "${_session_list[@]}")"; then
-                    msg_error "Please enter the correct session name."
-                    exit 1
-                fi
-                if [[ -f "/usr/share/xsessions/${session}.desktop" ]]; then
-                    autologin_session="${session}"
-                else
-                    msg_error "Please enter the correct session name."
-                    exit 1
-                fi
-
-            fi
+            autologin_session="$(ask_session)"
         else
             # 既に値が設定済み
-            if [[ ! -f "/usr/share/xsessions/${autologin_session}.desktop" ]]; then
-                # 存在しないセッションが指定された場合
-                msg_error "This is a session (${autologin_session}) that does not exist."
-                exit 1
-            fi
+            check_session "${autologin_session}"
         fi
 
         # autologin グループを設定
-        if ! getent group "autologin" 1> /dev/null 2>&1; then
-            LANG=C groupadd -r "autologin"
-        fi
-        LANG=C gpasswd -a "${autologin_user}" "autologin"
+        add_user_to_group "${autologin_user}" "autologin"
 
         # 設定を書き込み
         sddm_set_config "Autologin" "User" "${autologin_user}"
