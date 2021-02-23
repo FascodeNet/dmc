@@ -56,6 +56,9 @@ script_usage(){
     echo "    icon                              Run icon theme selection wizard"
     echo "    theme                             Run gtk theme selection wizard"
     echo
+    echo " SDDM command:"
+    echo "    autologin [username] [session]    Set up automatic login (with blank username to disable)"
+    echo
     echo " General option:"
     echo "    -m | --mode [mode name]           Specifiy the target you want to set"
     echo "    -e | --editer [editor path]       Specifiy the editor to use for editing"
@@ -66,7 +69,7 @@ script_usage(){
     echo "    --write-all-files                 Allows rewriting of all configuration files"
     echo
     echo " Supported modes:"
-    echo "    Display managers: lightdm, gdm"
+    echo "    Display managers: lightdm, gdm, sddm"
     echo "    LightDM greeters: webkit2, qtquick, slick"
     echo
     echo " This tool is incomplete and still under development."
