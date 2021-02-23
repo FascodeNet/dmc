@@ -953,6 +953,7 @@ slick_init_configs(){
     fi
 }
 
+#== Slick用コマンド ==#
 command_slick_grid(){
     local _arg="$(echo "${1-""}" | tr "[:upper:]" "[:lower:]")"
     if ! check_bool "${_arg}"; then
@@ -1025,7 +1026,102 @@ command_slick_icon_wizard(){
 }
 
 
-# 変数を設定
+#== SDDM用の汎用関数 ==#
+# sddm_get_value <section> <key> <valye>
+sddm_get_value(){
+    crudini --set "${DISPLAY_MANAGER_CONFIG["sddm"]}" "${1}" "${2}"
+}
+
+# sddm_set_config <section> <key> <value>
+sddm_set_config(){
+    crudini --set "${DISPLAY_MANAGER_CONFIG["sddm"]}" "${1}" "${2}" "${3}"
+}
+
+# sddm_remove_key <section> <key>
+sddm_remove_key(){
+    crudini --del "${DISPLAY_MANAGER_CONFIG["sddm"]}" "${1}" "${2}"
+}
+
+
+sddm_init_configs(){
+    mkdir -p "$(dirname "${DISPLAY_MANAGER_CONFIG["sddm"]}")"
+    sddm --example-config > "${DISPLAY_MANAGER_CONFIG["sddm"]}"
+}
+
+#== SDDM用コマンド ==#
+command_sddm_auto_login(){
+    if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
+        # 既に自動ログインが設定されているかを確認
+        local autologin_user="$(sddm_get_value Autologin User)"
+        if [[ -n "${autologin_user}" ]]; then
+            sddm_remove_key "Autologin" "User"
+            echo "Canceled automatic login of ${autologin_user}"
+        fi
+    else
+        local autologin_user="${1}" autologin_session
+        if [[ -v 2 ]]; then
+            autologin_session="${2}"
+        fi
+
+        # ユーザーチェック
+        if ! getent passwd "${autologin_user}" 1> /dev/null 2>&1; then
+            echo "${autologin_user} is a non-existent user."
+            exit 1
+        fi
+
+        # セッションを設定 (WayLandのセッションは現在サポートされていません)
+        if [[ -z "${autologin_session+SET}" ]]; then
+            if (( $(find "/usr/share/xsessions" -print0 -type f 2> /dev/null | xargs -0 -i basename {} | wc -l) <= 1 )); then
+                autologin_session="$(find "/usr/share/xsessions" -print0 -type f 2> /dev/null | xargs -0 -i basename {} | sed 's|.desktop$||g')"
+            elif [[ "${NON_INTERACTIVE}" = true ]]; then
+                # 非対話モード
+                # ~/.dmrcの値を設定します
+                autologin_session="$(grep -E '^Session=' "${HOME}/.dmrc" 2> /dev/null | cut -d '=' -f 2)"
+                if [[ -z "${autologin_session}" ]]; then
+                    msg_error "Failed to set the session."
+                    msg_error "Not specified and ~/.dmrc does not exist either."
+                    exit 1
+                fi
+            else
+                while read -r line; do
+                    _session_list+=("${line}")
+                done < <(find "/usr/share/xsessions" -type f -name "*.desktop" | xargs -I{} bash -c 'basename {} | sed "s|.desktop||g"')
+                if ! session="$(ask_question -p "Select the desktop session to autologin" "${_session_list[@]}")"; then
+                    msg_error "Please enter the correct session name."
+                    exit 1
+                fi
+                if [[ -f "/usr/share/xsessions/${session}.desktop" ]]; then
+                    autologin_session="${session}"
+                else
+                    msg_error "Please enter the correct session name."
+                    exit 1
+                fi
+
+            fi
+        else
+            # 既に値が設定済み
+            if [[ ! -f "/usr/share/xsessions/${autologin_session}.desktop" ]]; then
+                # 存在しないセッションが指定された場合
+                msg_error "This is a session (${autologin_session}) that does not exist."
+                exit 1
+            fi
+        fi
+
+        # autologin グループを設定
+        if ! getent group "autologin" 1> /dev/null 2>&1; then
+            LANG=C groupadd -r "autologin"
+        fi
+        LANG=C gpasswd -a "${autologin_user}" "autologin"
+
+        # 設定を書き込み
+        sddm_set_config "Autologin" "User" "${autologin_user}"
+        sddm_set_config "Autologin" "Session" "${autologin_session}"
+
+        echo "${autologin_user} will automatically log in with ${autologin_session}"
+    fi
+}
+
+#== 設定ファイルのパス ==#
 declare -A GREETER_CONFIG=(
     ["lightdm-webkit2-greeter"]="/etc/lightdm/lightdm-webkit2-greeter.conf"
     ["lightdm-slick-greeter"]="/etc/lightdm/slick-greeter.conf"
@@ -1162,7 +1258,7 @@ fi
 # コマンドとモードに応じて関数を実行する
 case "${COMMAND}" in
     "autologin")
-        check_command_dm "lightdm" "gdm"
+        check_command_dm "lightdm" "gdm" "sddm"
         case "${DISPLAY_MANAGER}" in
             "lightdm")
                 lightdm_init_configs
@@ -1172,8 +1268,10 @@ case "${COMMAND}" in
                 gdm_init_configs
                 command_gdm_auto_login "${COMMAND_ARGS}"
                 ;;
-            +)
-
+            "sddm")
+                sddm_init_configs
+                command_sddm_auto_login "${COMMAND_ARGS}"
+                ;;
         esac
         ;;
     "greeter")
