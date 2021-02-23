@@ -58,6 +58,10 @@ script_usage(){
     echo
     echo " SDDM command:"
     echo "    autologin [username] [session]    Set up automatic login (with blank username to disable)"
+    echo "    cursor                            Run cursor selection wizard"
+    echo "    cursor-change [cursor]            Specify the cursor theme"
+    echo "    numlock [true or false]           Toggle whether to enable Numlock force"
+    echo "    tty [int number]                  The lowest virtual terminal number that will be used"
     echo
     echo " General option:"
     echo "    -m | --mode [mode name]           Specifiy the target you want to set"
@@ -1073,6 +1077,101 @@ command_sddm_auto_login(){
     fi
 }
 
+command_sddm_cursor_wizard(){
+    # カーソル一覧を取得
+    local cursor_themes _current_theme="$(sddm_get_value "Theme" "CursorTheme")"
+    while read -r line; do cursor_themes+=("${line}"); done < <(get_cursor_theme)
+
+    # 一覧を生成
+    if ! _cursor_theme="$(ask_question -d "${_current_theme}" -p "Please select the cursor theme to use." "${cursor_themes[@]}")"; then
+        command_sddm_cursor_wizard
+        exit 0
+    fi
+
+    if [[ -n "${_cursor_theme}" ]]; then
+        command_sddm_cursor_change "${_cursor_theme}"
+    else
+        command_sddm_cursor_change
+        exit 0
+    fi
+
+    if [[ ! "${_current_theme}" = "${_cursor_theme}" ]]; then
+        echo "Changed cursor to ${_cursor_theme}"
+    fi
+}
+
+command_sddm_cursor_change(){
+    if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
+        msg_error "Please specify the cursor theme"
+        exit 1
+    fi
+    local cursor_themes
+    while read -r line; do cursor_themes+=("${line}"); done < <(get_cursor_theme)
+    if ! printf "%s\n" "${cursor_themes[@]}" | grep -x "${1}" 1>/dev/null 2>&1; then
+        msg_error "The cursor theme (${1}) was not found"
+        exit 1
+    fi
+    sddm_set_config "Theme" "CursorTheme" "${1}"
+}
+
+command_sddm_numlock(){
+    local _arg="$(echo "${1-""}" | tr "[:upper:]" "[:lower:]")"
+    if ! check_bool "${_arg}"; then
+        msg_error "Please specify true or false"
+        exit 1
+    fi
+    local _value
+    if [[ "${_arg}" = true ]]; then
+        _value="on"
+    else
+        _value="none"
+    fi
+    sddm_set_config "General" "Numlock" "${_value}"
+}
+
+command_sddm_tty(){
+    if ! check_int "${1}" || (( "${1}" < 1 )); then
+        msg_error "Please enter an integer greater than 1"
+        exit 1
+    fi
+    sddm_set_config "X11" "MinimumVT" "${1}"
+}
+
+command_sddm_theme_wizard(){
+    local _theme_list
+    while read -r line; do
+        _theme_list+=("${line}")
+    done < <(find "/usr/share/sddm/themes/" -maxdepth 1 -mindepth 1 -type d -print0 | xargs -0 -I{} basename {})
+
+    local _theme _current_theme=$(sddm_get_value "Theme" "Current")
+    if ! _theme="$(ask_question -d "${_current_theme}" -p "Please select the theme to use." "${_theme_list[@]}")"; then
+        command_sddm_theme_wizard
+        exit 0
+    fi
+    if [[ -n "${_theme}" ]]; then
+        command_sddm_theme_change "${_theme}"
+        echo "Changed the theme to ${_theme}"
+    else
+        command_sddm_theme_wizard
+        exit 0
+    fi
+    
+}
+
+command_sddm_theme_change(){
+    if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
+        msg_error "Please specify the theme name"
+        exit 1
+    fi
+    if [[ ! -d "/usr/share/sddm/themes/${1}" ]]; then
+        msg_error "The specified theme (${1}) does not exist"
+        exit 1
+    fi
+
+    sddm_set_config "Theme" "Current" "${1}"
+}
+
+
 #== 設定ファイルのパス ==#
 declare -A GREETER_CONFIG=(
     ["lightdm-webkit2-greeter"]="/etc/lightdm/lightdm-webkit2-greeter.conf"
@@ -1265,14 +1364,30 @@ case "${COMMAND}" in
         command_lightdm_show_config
         ;;
     "cursor")
-        check_command_dm "gdm"
-        gdm_init_configs
-        command_gdm_cursor_wizard
+        check_command_dm "gdm" "sddm"
+        case "${DISPLAY_MANAGER}" in
+            gdm)
+                gdm_init_configs
+                command_gdm_cursor_wizard
+                ;;
+            sddm)
+                sddm_init_configs
+                command_sddm_cursor_wizard
+                ;;
+        esac
         ;;
     "cursor-change")
-        check_command_dm "gdm"
-        gdm_init_configs
-        command_gdm_cursor_change "${COMMAND_ARGS}"
+        check_command_dm "gdm" "sddm"
+        case "${DISPLAY_MANAGER}" in
+            gdm)
+                gdm_init_configs
+                command_gdm_cursor_change "${COMMAND_ARGS}"
+                ;;
+            sddm)
+                sddm_init_configs
+                command_sddm_cursor_change "${COMMAND_ARGS}"
+                ;;
+        esac
         ;;
     "sound")
         check_command_dm "gdm"
@@ -1308,7 +1423,7 @@ case "${COMMAND}" in
         command_gdm_root_login "${COMMAND_ARGS}"
         ;;
     "theme")
-        check_command_dm "webkit2" "slick"
+        check_command_dm "webkit2" "slick" "sddm"
         case "${DISPLAY_MANAGER}" in
             "webkit2")
                 webkit2_init_configs
@@ -1318,10 +1433,14 @@ case "${COMMAND}" in
                 slick_init_configs
                 command_slick_theme_wizard
                 ;;
+            "sddm")
+                sddm_init_configs
+                command_sddm_theme_wizard
+                ;;
         esac
         ;;
     "theme-change")
-        check_command_dm "webkit2" "slick"
+        check_command_dm "webkit2" "slick" "sddm"
         case "${DISPLAY_MANAGER}" in
             "webkit2")
                 webkit2_init_configs
@@ -1330,6 +1449,10 @@ case "${COMMAND}" in
             "slick")
                 msg_error "Not yet implemented."
                 exit 1
+                ;;
+            "sddm")
+                sddm_init_configs
+                command_sddm_theme_change
                 ;;
         esac
         ;;
@@ -1360,5 +1483,15 @@ case "${COMMAND}" in
         check_command_dm "slick"
         slick_init_configs
         command_slick_other_monitor "${COMMAND_ARGS}"
+        ;;
+    "numlock")
+        check_command_dm "sddm"
+        sddm_init_configs
+        command_sddm_numlock "${COMMAND_ARGS}"
+        ;;
+    "tty")
+        check_command_dm "sddm"
+        sddm_init_configs
+        command_sddm_tty "${COMMAND_ARGS}"
         ;;
 esac
