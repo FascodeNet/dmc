@@ -240,11 +240,11 @@ get_icon_theme(){
 }
 
 get_xorg_session(){
-    find "/usr/share/xsessions" -type f -name "*.desktop" | xargs -I{} bash -c 'basename {} | sed "s|.desktop||g"'
+    find "/usr/share/xsessions" -type f -print0 -name "*.desktop" | xargs -0 -I{} bash -c 'basename {} | sed "s|.desktop||g"'
 }
 
 get_wayland_session(){
-    find "/usr/share/wayland-sessions" -type f -name "*.desktop" | xargs -I{} bash -c 'basename {} | sed "s|.desktop||g"'
+    find "/usr/share/wayland-sessions" -type f  -print0 -name "*.desktop" | xargs -0 -I{} bash -c 'basename {} | sed "s|.desktop||g"'
 }
 
 # 質問を行う関数
