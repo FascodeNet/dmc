@@ -62,6 +62,8 @@ script_usage(){
     echo "    cursor-change [cursor]            Specify the cursor theme"
     echo "    numlock [true or false]           Toggle whether to enable Numlock force"
     echo "    tty [int number]                  The lowest virtual terminal number that will be used"
+    echo "    theme                             Run theme selection wizard"
+    echo "    theme-change [theme]              Specify the theme"
     echo
     echo " General option:"
     echo "    -m | --mode [mode name]           Specifiy the target you want to set"
