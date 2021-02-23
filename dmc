@@ -61,6 +61,7 @@ script_usage(){
     echo "    -e | --editer [editor path]       Specifiy the editor to use for editing"
     echo "    -h | --help                       This help message and exit"
     echo "    --non-interactive                 Run in non-interactive mode"
+    echo "    --no-check-target                 No check the target for the selected mode"
     echo "    --noroot                          No check root permission"
     echo "    --write-all-files                 Allows rewriting of all configuration files"
     echo
@@ -135,9 +136,20 @@ jq(){
     wrapper jq "${@}"
 }
 
+# 指定されたコマンドが現在のモードで実行可能かどうかを判定する
 check_command_dm(){
     if ! printf "%s\n" "${@}" | grep -xE "${DISPLAY_MANAGER}" >/dev/null 2>&1; then
         msg_error "This command (${COMMAND}) is not available in the current mode (${DISPLAY_MANAGER})."
+        exit 1
+    fi
+}
+
+# 現在のモードのメインバイナリが存在しているかどうか確認する
+check_main_binary(){
+    if [[ -z "${MAIN_BINARY["${DISPLAY_MANAGER}"]}" ]]; then
+        msg_warn "The main binary for the selected mode is not set."
+    elif [[ ! -f "${MAIN_BINARY["${DISPLAY_MANAGER}"]}" ]]; then
+        msg_error "The target for the selected mode is not installed."
         exit 1
     fi
 }
@@ -1027,6 +1039,19 @@ declare -A DISPLAY_MANAGER_CONFIG=(
     ["lightdm"]="/etc/lightdm/lightdm.conf.d/00-dmc-lightdm.conf"
     ["gdm-dconf"]="/etc/dconf/db/gdm.d/00-dmc-gdm"
     ["gdm-custom"]="/etc/gdm/custom.conf"
+    ["sddm"]="/etc/sddm.conf.d/sddm.conf"
+)
+
+declare -A MAIN_BINARY=(
+    ["lightdm"]="/usr/bin/lightdm"
+    ["gdm"]="/usr/bin/gdm"
+    ["sddm"]="/usr/bin/sddm"
+    ["webkit2"]="/usr/bin/lightdm-webkit2-greeter"
+    ["slick"]="/usr/bin/slick-greeter"
+    ["gtk"]="/usr/bin/lightdm-gtk-greeter"
+    ["elementary"]="/usr/bin/io.elementary.greeter"
+    ["mini"]="/usr/bin/lightdm-mini-greeter"
+    ["qtquick"]="/usr/bin/lightdm-qtquick-greeter"
 )
 
 
@@ -1065,11 +1090,12 @@ DISPLAY_MANAGER="${CURRENT_DM}"
 NON_INTERACTIVE=false
 WRITE_ALL_FILES=false
 NOROOT=false
+NO_CHECK_TARGET=false
 
 #== 引数解析 ==#
 ARGUMENT="${*}"
 OPTS="m:e:h"
-OPTL="mode:,editor:,help,non-interactive,noroot,write-all-files"
+OPTL="mode:,editor:,help,non-interactive,noroot,write-all-files,no-check-target"
 # shellcheck disable=SC2086
 if ! OPT="$(getopt -o ${OPTS} -l ${OPTL} -- ${ARGUMENT})"; then
     exit 1
@@ -1100,6 +1126,10 @@ while true; do
             NOROOT=true
             shift 1
             ;;
+        --no-check-target)
+            NO_CHECK_TARGET=true
+            shift 1
+            ;;
         --write-all-files)
             WRITE_ALL_FILES=true
             shift 1
@@ -1122,6 +1152,11 @@ COMMAND_ARGS="${*}"
 if [[ "${COMMAND}" = "null" ]]; then
     script_usage
     exit 1
+fi
+
+# メインバイナリの確認を実行
+if [[ "${NO_CHECK_TARGET}" = false ]]; then
+    check_main_binary
 fi
 
 # コマンドとモードに応じて関数を実行する
