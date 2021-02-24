@@ -65,6 +65,14 @@ script_usage(){
     echo "    theme                             Run theme selection wizard"
     echo "    theme-change [theme]              Specify the theme"
     echo
+    echo " LXDM command:"
+    echo "    autologin [username] [session]    Set up automatic login (with blank username to disable)"
+    echo "    back [image]                      Specify the background image"
+    echo "    session                           Run default session selection wizard"
+    echo "    session-change [session]          Specify the default session"
+    echo "    remove-last                       Remove last selected setting"
+    echo "    edit-script                       Edit the script"
+    echo
     echo " General option:"
     echo "    -m | --mode [mode name]           Specifiy the target you want to set"
     echo "    -e | --editer [editor path]       Specifiy the editor to use for editing"
@@ -75,7 +83,7 @@ script_usage(){
     echo "    --write-all-files                 Allows rewriting of all configuration files"
     echo
     echo " Supported modes:"
-    echo "    Display managers: lightdm, gdm, sddm"
+    echo "    Display managers: lightdm, gdm, sddm, lxdm"
     echo "    LightDM greeters: webkit2, qtquick, slick"
     echo
     echo " This tool is incomplete and still under development."
@@ -155,7 +163,7 @@ check_command_dm(){
 
 # 現在のモードのメインバイナリが存在しているかどうか確認する
 check_main_binary(){
-    if [[ -z "${MAIN_BINARY["${DISPLAY_MANAGER}"]}" ]]; then
+    if [[ -z "${MAIN_BINARY["${DISPLAY_MANAGER}"]+SET}" ]]; then
         msg_warn "The main binary for the selected mode is not set."
     elif [[ ! -f "${MAIN_BINARY["${DISPLAY_MANAGER}"]}" ]]; then
         msg_error "The target for the selected mode is not installed."
@@ -351,6 +359,18 @@ check_session(){
         msg_error "This is a session (${1}) that does not exist."
         exit 1
     fi
+}
+
+# セッションのバイナリを取得する
+# get_session <session name>
+get_session(){
+    check_session "${1}"
+    local session_exec="$(crudini --get "/usr/share/xsessions/${1}.desktop" "Desktop Entry" "Exec")"
+    if [[ ! -f "${session_exec}" ]]; then
+        session_exec="$(type -p "${session_exec}")"
+    fi
+    echo -n "${session_exec}"
+    return 0
 }
 
 # ユーザーをグループに追加する
@@ -1041,8 +1061,11 @@ sddm_remove_key(){
 
 
 sddm_init_configs(){
-    mkdir -p "$(dirname "${DISPLAY_MANAGER_CONFIG["sddm"]}")"
-    sddm --example-config > "${DISPLAY_MANAGER_CONFIG["sddm"]}"
+    check_root
+    if [[ ! -f "${DISPLAY_MANAGER_CONFIG["sddm"]}" ]]; then
+        mkdir -p "$(dirname "${DISPLAY_MANAGER_CONFIG["sddm"]}")"
+        sddm --example-config > "${DISPLAY_MANAGER_CONFIG["sddm"]}"
+    fi
 }
 
 #== SDDM用コマンド ==#
@@ -1173,6 +1196,120 @@ command_sddm_theme_change(){
     sddm_set_config "Theme" "Current" "${1}"
 }
 
+#== LXDM用の汎用関数 ==#
+# sddm_get_value <section> <key> <valye>
+lxdm_get_value(){
+    crudini --set "${DISPLAY_MANAGER_CONFIG["lxdm"]}" "${1}" "${2}"
+}
+
+# sddm_set_config <section> <key> <value>
+lxdm_set_config(){
+    crudini --set "${DISPLAY_MANAGER_CONFIG["lxdm"]}" "${1}" "${2}" "${3}"
+}
+
+# sddm_remove_key <section> <key>
+lxdm_remove_key(){
+    crudini --del "${DISPLAY_MANAGER_CONFIG["lxdm"]}" "${1}" "${2}"
+}
+
+
+lxdm_init_configs(){
+    check_root
+    if [[ ! -f "${DISPLAY_MANAGER_CONFIG["lxdm"]}" ]]; then
+        mkdir -p "$(dirname "${DISPLAY_MANAGER_CONFIG["lxdm"]}")"
+        touch "${DISPLAY_MANAGER_CONFIG["lxdm"]}"
+    fi
+}
+
+#== LXDM用コマンド ==#
+command_lxdm_auto_login(){
+    if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
+        # 既に自動ログインが設定されているかを確認
+        local autologin_user="$(lxdm_get_value "base" "autologin")"
+        if [[ -n "${autologin_user}" ]]; then
+            sddm_remove_key "base" "autologin"
+            echo "Canceled automatic login of ${autologin_user}"
+        fi
+    else
+        local autologin_user="${1}" autologin_session
+        if [[ -v 2 ]]; then
+            autologin_session="${2}"
+        fi
+
+        # セッションを設定 (WayLandのセッションは現在サポートされていません)
+        if [[ -z "${autologin_session+SET}" ]]; then
+            autologin_session="$(ask_session)"
+        else
+            # 既に値が設定済み
+            check_session "${autologin_session}"
+        fi
+
+        # autologin グループを設定
+        add_user_to_group "${autologin_user}" "autologin"
+
+        # 自動ログインするユーザーを書き込み
+        sddm_set_config "base" "autologin" "${autologin_user}"
+
+        # デフォルトセッションを設定
+        command_lxdm_session_change "${autologin_session}"
+
+        echo "${autologin_user} will automatically log in with ${autologin_session}"
+    fi
+}
+
+command_lxdm_session_wizard(){
+    command_lxdm_session_change "$(ask_session)"
+}
+
+command_lxdm_session_change(){
+    if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
+        msg_error "Please specify the session name"
+        exit 1
+    fi
+    local session="${1}"
+    check_session "${session}"
+    local session_exec="$(get_session "${session}")"
+    lxdm_set_config "base" "session" "${session_exec}"
+}
+
+command_lxdm_remove_last(){
+    rm -rf "/var/lib/lxdm/lxdm.conf"
+    echo "Removed last configs"
+}
+
+comamnd_lxdm_edit_script(){
+    local _filelist=(
+        "LoginReady : executed with root privileges when LXDM is ready to show the login window"
+        "PreLogin   : run as root before logging a user in"
+        "PostLogin  : run as the logged-in user right after they have logged in"
+        "PostLogout : run as the logged-in user right after they have logged out"
+        "PreReboot  : run as root before rebooting with LXDM"
+        "PreShutdown: run as root before poweroff with LXDM"
+    )
+    if ! file=$(ask_question -p "Select the script you want to edit" "${_filelist[@]}" | cut -d ":" -f 1 | tr -d " "); then
+        comamnd_lxdm_edit_script
+        exit 0
+    fi
+    bash -c "${USE_EDITOR} ${file}"
+}
+
+command_lxdm_back(){
+    if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
+        msg_error "Please specify the image of background"
+        exit 1
+    fi
+    if [[ ! -f "${1}" ]]; then
+        msg_error "${1} was not found."
+        exit 1
+    fi
+
+    local _backgrounf_file="/usr/share/backgrounds/lxdm/background"
+    mkdir -p "$(dirname "${_backgrounf_file}")"
+    cp "${1}" "${_backgrounf_file}"
+    chmod 644 "${_backgrounf_file}"
+    
+    lxdm_set_config "display" "bg" "file://${_backgrounf_file}"
+}
 
 #== 設定ファイルのパス ==#
 declare -A GREETER_CONFIG=(
@@ -1189,6 +1326,7 @@ declare -A DISPLAY_MANAGER_CONFIG=(
     ["gdm-dconf"]="/etc/dconf/db/gdm.d/00-dmc-gdm"
     ["gdm-custom"]="/etc/gdm/custom.conf"
     ["sddm"]="/etc/sddm.conf.d/sddm.conf"
+    ["lxdm"]="/etc/lxdm/lxdm.conf"
 )
 
 declare -A MAIN_BINARY=(
@@ -1201,6 +1339,7 @@ declare -A MAIN_BINARY=(
     ["elementary"]="/usr/bin/io.elementary.greeter"
     ["mini"]="/usr/bin/lightdm-mini-greeter"
     ["qtquick"]="/usr/bin/lightdm-qtquick-greeter"
+    ["lxdm"]="/usr/bin/lxdm"
 )
 
 
@@ -1311,7 +1450,7 @@ fi
 # コマンドとモードに応じて関数を実行する
 case "${COMMAND}" in
     "autologin")
-        check_command_dm "lightdm" "gdm" "sddm"
+        check_command_dm "lightdm" "gdm" "sddm" "lxdm"
         case "${DISPLAY_MANAGER}" in
             "lightdm")
                 lightdm_init_configs
@@ -1324,6 +1463,10 @@ case "${COMMAND}" in
             "sddm")
                 sddm_init_configs
                 command_sddm_auto_login "${COMMAND_ARGS}"
+                ;;
+            "lxdm")
+                lxdm_init_configs
+                command_lxdm_auto_login "${COMMAND_ARGS}"
                 ;;
         esac
         ;;
@@ -1459,7 +1602,7 @@ case "${COMMAND}" in
         esac
         ;;
     "back")
-        check_command_dm "qtquick" "slick"
+        check_command_dm "qtquick" "slick" "lxdm"
         case "${DISPLAY_MANAGER}" in
             "qtquick")
                 qtquick_init_configs
@@ -1468,6 +1611,10 @@ case "${COMMAND}" in
             "slick")
                 slick_init_configs
                 command_slick_back "${COMMAND_ARGS}"
+                ;;
+            "back")
+                lxdm_init_configs
+                command_lxdm_back "${COMMAND_ARGS}"
                 ;;
         esac
         ;;
@@ -1495,5 +1642,29 @@ case "${COMMAND}" in
         check_command_dm "sddm"
         sddm_init_configs
         command_sddm_tty "${COMMAND_ARGS}"
+        ;;
+    "session")
+        check_command_dm "lxdm"
+        lxdm_init_configs
+        command_lxdm_session_wizard
+        ;;
+    "session-change")
+        check_command_dm "lxdm"
+        lxdm_init_configs
+        command_lxdm_session_change "${COMMAND_ARGS}"
+        ;;
+    "remove-last")
+        check_command_dm "lxdm"
+        lxdm_init_configs
+        command_lxdm_remove_last
+        ;;
+    "edit-script")
+        check_command_dm "lxdm"
+        lxdm_init_configs
+        comamnd_lxdm_edit_script
+        ;;
+    *)
+        msg_error "This command cannot be used in any mode"
+        exit 1
         ;;
 esac
