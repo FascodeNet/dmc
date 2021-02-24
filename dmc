@@ -54,7 +54,8 @@ script_usage(){
     echo "    back [image]                      Specify the background image"
     echo "    grid [true or false]              Toggle whether to show grid"
     echo "    icon                              Run icon theme selection wizard"
-    echo "    theme                             Run gtk theme selection wizard"
+    echo "    gtk                               Run gtk theme selection wizard"
+    echo "    gtk-change [theme]                Specify gtk theme"
     echo
     echo " SDDM command:"
     echo "    autologin [username] [session]    Set up automatic login (with blank username to disable)"
@@ -85,6 +86,8 @@ script_usage(){
     echo " Supported modes:"
     echo "    Display managers: lightdm, gdm, sddm, lxdm"
     echo "    LightDM greeters: webkit2, qtquick, slick"
+    echo
+    echo " Default mode: ${DISPLAY_MANAGER}"
     echo
     echo " This tool is incomplete and still under development."
     echo " If you find a bug, please report it on GitHub."
@@ -133,7 +136,7 @@ check_bool(){
     fi
 }
 
-# crudini ラッパー
+# コマンドラッパー
 wrapper(){
     local _command="${1}"
     shift 1
@@ -145,10 +148,12 @@ wrapper(){
     fi
 }
 
+# crudini ラッパー
 crudini(){
     wrapper crudini "${@}"
 }
 
+# jq ラッパー
 jq(){
     wrapper jq "${@}"
 }
@@ -999,7 +1004,7 @@ command_slick_back(){
 }
 
 
-command_slick_theme_wizard(){
+command_slick_gtk_wizard(){
     local gtk_themes
     while read -r line; do gtk_themes+=("${line}"); done < <(get_gtk_theme)
 
@@ -1007,19 +1012,31 @@ command_slick_theme_wizard(){
     local _theme
     echo "Please select the theme to use."
     if ! _theme="$(ask_question "${gtk_themes[@]}")"; then
-        command_slick_theme_wizard
+        command_slick_gtk_wizard
         exit 0
     fi
 
     # 結果に応じて処理を実行
     if [[ -n "${_theme}" ]]; then
-        slick_set_config "theme-name" "${_theme}"
+        command_slick_gtk_change "${_theme}"
     else
-        command_slick_theme_wizard
+        command_slick_gtk_wizard
         exit 0
     fi
     echo "Changed theme to ${_theme}"
 
+}
+
+command_slick_gtk_change(){
+    if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
+        msg_error "Please specify the theme"
+        exit 1
+    fi
+    if [[ ! -d "/usr/share/themes/${1}" ]]; then
+        msg_error "${1} was not found."
+        exit 1
+    fi
+    slick_set_config "theme-name" "${1}"
 }
 
 command_slick_icon_wizard(){
@@ -1568,15 +1585,11 @@ case "${COMMAND}" in
         command_gdm_root_login "${COMMAND_ARGS}"
         ;;
     "theme")
-        check_command_dm "webkit2" "slick" "sddm"
+        check_command_dm "webkit2" "sddm"
         case "${DISPLAY_MANAGER}" in
             "webkit2")
                 webkit2_init_configs
                 command_webkit2_theme_wizard
-                ;;
-            "slick")
-                slick_init_configs
-                command_slick_theme_wizard
                 ;;
             "sddm")
                 sddm_init_configs
@@ -1585,21 +1598,28 @@ case "${COMMAND}" in
         esac
         ;;
     "theme-change")
-        check_command_dm "webkit2" "slick" "sddm"
+        check_command_dm "webkit2" "sddm"
         case "${DISPLAY_MANAGER}" in
             "webkit2")
                 webkit2_init_configs
                 command_webkit2_theme_change "${COMMAND_ARGS}"
-                ;;
-            "slick")
-                msg_error "Not yet implemented."
-                exit 1
                 ;;
             "sddm")
                 sddm_init_configs
                 command_sddm_theme_change
                 ;;
         esac
+        ;;
+    "gtk")
+        check_command_dm "slick"
+        slick_init_configs
+        command_slick_gtk_wizard
+        ;;
+    "gtk-change")
+        check_command_dm "slick"
+        slick_init_configs
+        command_slick_gtk_change
+        msg_error "Not yet implemented."
         ;;
     "back")
         check_command_dm "qtquick" "slick" "lxdm"
