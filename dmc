@@ -73,6 +73,8 @@ script_usage(){
     echo "    session-change [session]          Specify the default session"
     echo "    remove-last                       Remove last selected setting"
     echo "    edit-script                       Edit the script"
+    echo "    gtk                               Run gtk theme selection wizard"
+    echo "    gtk-change [theme]                Specify gtk theme"
     echo
     echo " General option:"
     echo "    -m | --mode [mode name]           Specifiy the target you want to set"
@@ -354,6 +356,19 @@ ask_session(){
         fi
     fi
     echo "${_session}"
+}
+
+# GTKテーマを聞く
+ask_gtk_theme(){
+    local gtk_themes _theme
+    while read -r line; do gtk_themes+=("${line}"); done < <(get_gtk_theme)
+
+    # 質問する
+    if ! _theme="$(ask_question -p "Please select the theme to use" "${gtk_themes[@]}")"; then
+        msg_error "Please select the correct theme"
+        exit 1
+    fi
+    echo "${_theme}"
 }
 
 # セッションが利用可能かどうか確認する
@@ -1005,26 +1020,15 @@ command_slick_back(){
 
 
 command_slick_gtk_wizard(){
-    local gtk_themes
-    while read -r line; do gtk_themes+=("${line}"); done < <(get_gtk_theme)
-
-    # 質問する
-    local _theme
-    echo "Please select the theme to use."
-    if ! _theme="$(ask_question "${gtk_themes[@]}")"; then
-        command_slick_gtk_wizard
-        exit 0
-    fi
+    local _theme="$(ask_gtk_theme)"
 
     # 結果に応じて処理を実行
     if [[ -n "${_theme}" ]]; then
         command_slick_gtk_change "${_theme}"
     else
-        command_slick_gtk_wizard
-        exit 0
+        exit 1
     fi
     echo "Changed theme to ${_theme}"
-
 }
 
 command_slick_gtk_change(){
@@ -1328,6 +1332,30 @@ command_lxdm_back(){
     lxdm_set_config "display" "bg" "file://${_backgrounf_file}"
 }
 
+command_lxdm_gtk_wizard(){
+    local _theme="$(ask_gtk_theme)"
+
+    # 結果に応じて処理を実行
+    if [[ -n "${_theme}" ]]; then
+        command_lxdm_gtk_change "${_theme}"
+    else
+        exit 1
+    fi
+    echo "Changed theme to ${_theme}"
+}
+
+command_lxdm_gtk_change(){
+    if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
+        msg_error "Please specify the theme"
+        exit 1
+    fi
+    if [[ ! -d "/usr/share/themes/${1}" ]]; then
+        msg_error "${1} was not found."
+        exit 1
+    fi
+    lxdm_set_config "display" "gtk_theme" "${1}"
+}
+
 #== 設定ファイルのパス ==#
 declare -A GREETER_CONFIG=(
     ["lightdm-webkit2-greeter"]="/etc/lightdm/lightdm-webkit2-greeter.conf"
@@ -1528,11 +1556,11 @@ case "${COMMAND}" in
     "cursor")
         check_command_dm "gdm" "sddm"
         case "${DISPLAY_MANAGER}" in
-            gdm)
+            "gdm")
                 gdm_init_configs
                 command_gdm_cursor_wizard
                 ;;
-            sddm)
+            "sddm")
                 sddm_init_configs
                 command_sddm_cursor_wizard
                 ;;
@@ -1541,11 +1569,11 @@ case "${COMMAND}" in
     "cursor-change")
         check_command_dm "gdm" "sddm"
         case "${DISPLAY_MANAGER}" in
-            gdm)
+            "gdm")
                 gdm_init_configs
                 command_gdm_cursor_change "${COMMAND_ARGS}"
                 ;;
-            sddm)
+            "sddm")
                 sddm_init_configs
                 command_sddm_cursor_change "${COMMAND_ARGS}"
                 ;;
@@ -1611,15 +1639,29 @@ case "${COMMAND}" in
         esac
         ;;
     "gtk")
-        check_command_dm "slick"
-        slick_init_configs
-        command_slick_gtk_wizard
+        check_command_dm "slick" "lxdm"
+        case "${DISPLAY_MANAGER}" in
+            "slick")
+                slick_init_configs
+                command_slick_gtk_wizard
+                ;;
+            "lxdm")
+                lxdm_init_configs
+                command_lxdm_gtk_wizard
+                ;;
+        esac
         ;;
     "gtk-change")
-        check_command_dm "slick"
-        slick_init_configs
-        command_slick_gtk_change
-        msg_error "Not yet implemented."
+        check_command_dm "slick" "lxdm"
+        case "${DISPLAY_MANAGER}" in
+            "slick")
+                slick_init_configs
+                command_slick_gtk_change "${COMMAND_ARGS}"
+                ;;
+            "lxdm")
+                command_lxdm_gtk_change "${COMMAND_ARGS}"
+                ;;
+        esac
         ;;
     "back")
         check_command_dm "qtquick" "slick" "lxdm"
