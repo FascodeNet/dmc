@@ -21,6 +21,7 @@ pkgver() {
 }
 
 package() {
-    install -m 755 -D "${srcdir}/dmc/dmc" "${pkgdir}/usr/bin/dmc"
+    install -m 755 -D "${srcdir}/dmc/src/dmc/dmc" "${pkgdir}/usr/bin/dmc"
+    install -m 755 -D "${srcdir}/dmc/src/rdm/rdm" "${pkgdir}/usr/bin/rdm"
     install -m 755 -D "${srcdir}/dmc/LICENSE.md" "${pkgdir}/usr/share/licenses/dmc/LICENSE.md"
 }
