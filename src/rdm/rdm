@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+#
+# Yamada Hayao
+# Twitter: @Hayao0819
+# Email  : hayao@fascode.net
+#
+# (c) 2019-2021 Fascode Network.
+#
+# rdm
+#
+# LICENSE: THE SUSHI-WARE LICENSE
+# https://github.com/MakeNowJust/sushi-ware
+#
+#
+
+script_usage(){
+    echo "usage: rdm [options]"
+    echo
+    echo "Wrapper for automatically switching display managers"
+    echo
+    echo " General option:"
+    echo "    -h | --help                       This help message and exit"
+    echo
+    echo " This tool is incomplete and still under development."
+    echo " If you find a bug, please report it on GitHub."
+    echo " https://github.com/FascodeNet/dmc"
+    echo
+}
+
+set -eu
+
+# エラー
+msg_error() {
+    echo "${@}" 1>&2
+}
+
+# 警告
+msg_warn() {
+    echo "${@}" 1>&2
+}
+
+#== 引数解析 ==#
+ARGUMENT="${*}"
+OPTS="h"
+OPTL="help"
+# shellcheck disable=SC2086
+if ! OPT="$(getopt -o ${OPTS} -l ${OPTL} -- ${ARGUMENT})"; then
+    exit 1
+fi
+
+eval set -- "${OPT}"
+unset OPT OPTS OPTL
+
+while true; do
+    case "${1}" in
+        -h | --help)
+            script_usage
+            exit 0
+            ;;
+        --)
+            shift 1
+            break
+            ;;
+    esac
+done

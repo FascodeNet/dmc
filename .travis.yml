@@ -1,6 +1,8 @@
 language: shell
 script:
-  - bash -c 'shopt -s globstar nullglob; shellcheck -s bash --exclude=SC2068 -S error dmc'
+  - bash -c 'shopt -s globstar nullglob; shellcheck -s bash -S error ./src/dmc/dmc'
+  - bash -c 'shopt -s globstar nullglob; shellcheck -s bash -S error ./src/rdm/rdm'
+  - bash -c 'shopt -s globstar nullglob; shellcheck -s bash -S error ./PKGBUILD/dmc-git/PKGBUILD'
   
 git:
   submodules: false
