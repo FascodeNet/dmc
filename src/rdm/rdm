@@ -13,12 +13,20 @@
 #
 #
 
+simulation=false
+
 script_usage(){
-    echo "usage: rdm [options]"
+    echo "usage: rdm [options] [command]"
     echo
     echo "Wrapper for automatically switching display managers"
     echo
+    echo " General command:"
+    echo "    run                               Launches the configured random display manager"
+    echo "    show                              Show the current settings"
+    echo "    test                              Test that the settings are correct"
+    echo
     echo " General option:"
+    echo "    -s | --simulation                 Enable simulation mode"
     echo "    -h | --help                       This help message and exit"
     echo
     echo " This tool is incomplete and still under development."
@@ -28,6 +36,24 @@ script_usage(){
 }
 
 set -eu
+
+# rootチェック
+check_root(){
+    if (( "${UID}" != 0 )); then
+        msg_error "You have to run as root"
+        exit 1
+    fi
+}
+
+# systemdのunitが存在しているか確認
+check_systemd_unit(){
+    if [[ ! -v 1 ]]; then
+        return 1
+    elif systemctl cat "${1}" 1> /dev/null 2>&1; then
+        return 0
+    fi
+    return 1
+}
 
 # エラー
 msg_error() {
@@ -39,10 +65,79 @@ msg_warn() {
     echo "${@}" 1>&2
 }
 
+# 使用可能なディスプレイマネージャの一覧を取得
+get_dm_list(){
+    local dm available=()
+    for dm in ${ENABLED_DM_NAME[@]}; do
+        if check_systemd_unit "${DM_SERVICE_NAME[${dm}]}"; then
+            available+=("${dm}")
+        fi
+    done
+    printf "%s\n" "${available[@]}"
+}
+
+# testコマンド
+command_test() {
+    local dm _error=false
+
+    # ディスプレイマネージャのサービス名を確認
+    for dm in ${ENABLED_DM_NAME[@]}; do
+
+        if [[ -z "${DM_SERVICE_NAME[${dm}]+SET}" ]]; then
+            msg_error "Service of ${dm} is not set."
+            _error=true
+        elif ! check_systemd_unit "${DM_SERVICE_NAME[${dm}]}"; then
+            msg_warn "Service name ${DM_SERVICE_NAME[${dm}]} was not found"
+            _error=true
+        fi
+
+    done
+
+
+    if [[ "${_error}" = true ]]; then
+        exit 1
+    else
+        exit 0
+    fi
+}
+
+# showコマンド
+command_show(){
+    echo "List of enabled display manager"
+    while read -r line; do
+        echo "   ${line}"
+    done < <(get_dm_list)
+}
+
+# runコマンド
+command_run(){
+    local dm_number="$(get_dm_list | wc -l)"
+    if (( "${dm_number}" == 0 )); then
+        msg_error "No display manager available."
+        exit 1
+    else
+        local dm_name="$(get_dm_list | head -n "$(( "${RANDOM}" % "${dm_number}" + 1))" | tail -n 1 )"
+        if [[ "${simulation}" = true ]]; then
+            echo "Start ${dm_name}"
+        else
+            systemctl start "${dm_name}"
+        fi
+    fi
+}
+
+# 設定ファイル読み込み
+script_path="$( cd -P "$( dirname "$(readlink -f "${0}")" )" && pwd )"
+for config in "${script_path}/rdm.conf" "/etc/rdm.conf"; do
+    if [[ -f "${config}" ]]; then
+        source "${config}"
+    fi
+done
+unset config
+
 #== 引数解析 ==#
 ARGUMENT="${*}"
-OPTS="h"
-OPTL="help"
+OPTS="hs"
+OPTL="help,simulation"
 # shellcheck disable=SC2086
 if ! OPT="$(getopt -o ${OPTS} -l ${OPTL} -- ${ARGUMENT})"; then
     exit 1
@@ -53,6 +148,10 @@ unset OPT OPTS OPTL
 
 while true; do
     case "${1}" in
+        -s | --simulation)
+            simulation=true
+            shift 1
+            ;;
         -h | --help)
             script_usage
             exit 0
@@ -63,3 +162,31 @@ while true; do
             ;;
     esac
 done
+
+# コマンドの引数を解析
+COMMAND="${1:-run}"
+if (( "${#}" >= 1 )); then
+    shift 1
+fi
+COMMAND_ARGS="${*}"
+: "${COMMAND_ARGS-""}" # サブコマンドの引数が何も指定されなかった場合に空文字を代入
+
+if [[ "${COMMAND}" = "null" ]]; then
+    script_usage
+    exit 1
+fi
+
+# コマンドとモードに応じて関数を実行する
+case "${COMMAND}" in
+    "test")
+        #check_root
+        command_test
+        ;;
+    "show")
+        command_show
+        ;;
+    "run")
+        check_root
+        command_run
+        ;;
+esac
