@@ -16,10 +16,16 @@
 # https://qiita.com/laikuaut/items/4bc07eabce56ee30812d
 # https://qiita.com/t_nakayama0714/items/80b4c94de43643f4be51
 
+SCRIPT_PATH="$( cd -P "$( dirname "$(readlink -f "${0}")" )" && pwd )"
+
 script_usage(){
     echo "usage: dmc [options] [command]"
     echo
     echo "A simple tool for switching LightDM Greeters"
+    echo
+    echo " General command:"
+    echo "    dm [display manager]              Set display manager"
+    echo "    [mode] [command]                  You can specify the mode as a command"
     echo
     echo " LightDM command:"
     echo "    autologin [username] [session]    Set up automatic login (with blank username to disable)"
@@ -434,6 +440,69 @@ check_filetype(){
     # 正常終了しなかったので異常終了
     return 1
 }
+
+# systemdのunitが存在しているか確認
+check_systemd_unit(){
+    if [[ ! -v 1 ]]; then
+        return 1
+    elif systemctl cat "${1}" 1> /dev/null 2>&1; then
+        return 0
+    fi
+    return 1
+}
+
+#== すべてのモード用コマンド ==#
+command_general_dm(){
+    if [[ -z "${1}" ]] || [[ "${1}" = "" ]]; then
+        msg_error "Please specify display manager"
+        exit 1
+    fi
+
+    # 現在のディスプレイマネージャを無効化
+    systemctl disable "${CURRENT_DM}.service"
+
+    # 指定されたディスプレイマネージャを有効化
+    if check_systemd_unit "${1}"; then
+        systemctl enable "${1}.service"
+    else
+        msg_error "Wrong display manager name"
+    fi
+}
+
+# モードをコマンドとして扱い自身を再実行する
+# command_mode <mode> <command> <args>
+command_mode(){
+    if [[ -z "${2+SET}" ]] || [[ "${2}" = "" ]]; then
+        msg_error "Please specify command"
+        exit 1
+    fi
+
+    local _mode="${1}" _command="${2}"
+    local _dmc_args="-e ${USE_EDITOR} -m ${_mode}"
+    shift 2
+
+    # 基本的な変数を設定
+    local _command_args="${*}"
+    : "${_command_args-""}" # サブコマンドの引数が何も指定されなかった場合に空文字を代入
+
+
+    # オプション設定
+    if [[ "${NON_INTERACTIVE}" = true ]]; then
+        _dmc_args+=" --non-interactive"
+    fi
+    if [[ "${NOROOT}" = true ]]; then
+        _dmc_args+=" --noroot"
+    fi
+    if [[ "${NO_CHECK_TARGET}" = true ]]; then
+        _dmc_args+=" --no-check-target"
+    fi
+    if [[ "${WRITE_ALL_FILES}" = true ]]; then
+        _dmc_args+=" --write-all-files"
+    fi
+
+    bash -c "${SCRIPT_PATH}/$(basename "${0}") ${_dmc_args} ${_command} ${_command_args}"
+}
+
 
 
 #== LightDM用の汎用関数 ==#
@@ -1724,6 +1793,12 @@ case "${COMMAND}" in
         check_command_dm "lxdm"
         lxdm_init_configs
         comamnd_lxdm_edit_script
+        ;;
+    "dm")
+        command_general_dm "${COMMAND_ARGS}"
+        ;;
+    "lightdm" | "gdm" | "sddm" | "lxdm" | "webkit2" | "qtquick" | "slick")
+        command_mode "${COMMAND}" "${COMMAND_ARGS}"
         ;;
     *)
         msg_error "This command cannot be used in any mode"
