@@ -120,7 +120,8 @@ command_run(){
         if [[ "${simulation}" = true ]]; then
             echo "Start ${dm_name}"
         else
-            systemctl start "${dm_name}"
+            #systemctl start "${dm_name}"
+            eval $(systemctl cat "${dm_name}" | crudini - "Service" ExecStart)
         fi
     fi
 }
