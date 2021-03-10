@@ -83,6 +83,7 @@ script_usage(){
     echo "    gtk-change [theme]                Specify gtk theme"
     echo
     echo " General option:"
+    echo "    -G | --lightdm-greeter            Automatically get the current greeter and set as mode (Only LightDM)"
     echo "    -m | --mode [mode name]           Specifiy the target you want to set"
     echo "    -e | --editer [editor path]       Specifiy the editor to use for editing"
     echo "    -h | --help                       This help message and exit"
@@ -1449,11 +1450,19 @@ declare -A MAIN_BINARY=(
     ["sddm"]="/usr/bin/sddm"
     ["webkit2"]="/usr/bin/lightdm-webkit2-greeter"
     ["slick"]="/usr/bin/slick-greeter"
-    ["gtk"]="/usr/bin/lightdm-gtk-greeter"
+    #["gtk"]="/usr/bin/lightdm-gtk-greeter"
     ["elementary"]="/usr/bin/io.elementary.greeter"
     ["mini"]="/usr/bin/lightdm-mini-greeter"
     ["qtquick"]="/usr/bin/lightdm-qtquick-greeter"
     ["lxdm"]="/usr/bin/lxdm"
+)
+
+declare -A GREETER_MODE=(
+    ["lightdm-webkit2-greeter"]="webkit2"
+    ["lightdm-slick-greeter"]="slick"
+    ["io.elementary.greeter"]="elementary"
+    ["lightdm-mini-greeter"]="mini"
+    ["lightdm-qtquick-greeter"]="qtquick"
 )
 
 
@@ -1496,8 +1505,8 @@ NO_CHECK_TARGET=false
 
 #== 引数解析 ==#
 ARGUMENT="${*}"
-OPTS="m:e:h"
-OPTL="mode:,editor:,help,non-interactive,noroot,write-all-files,no-check-target"
+OPTS="m:e:hG"
+OPTL="mode:,editor:,help,non-interactive,noroot,write-all-files,no-check-target,lightdm-greeter"
 # shellcheck disable=SC2086
 if ! OPT="$(getopt -o ${OPTS} -l ${OPTL} -- ${ARGUMENT})"; then
     exit 1
@@ -1519,6 +1528,15 @@ while true; do
         -h | --help)
             script_usage
             exit 0
+            ;;
+        -G | --lightdm-greeter)
+            if [[ ! -z "${LIGHTDM_CURRENT_GREETER+SET}" ]]; then
+                DISPLAY_MANAGER="${GREETER_MODE["${LIGHTDM_CURRENT_GREETER}"]}"
+            else
+                msg_error "Failed to get the currently running Greeter."
+                exit 1
+            fi
+            shift 1
             ;;
         --non-interactive)
             NON_INTERACTIVE=true
