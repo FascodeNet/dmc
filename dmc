@@ -576,6 +576,14 @@ lightdm_get_value(){
     fi
 }
 
+lightdm_greeter_list(){
+    local greeter_list
+    while read -r line; do
+        greeter_list+=("${line}")
+    done < <( (find "${LIGHTDM_GREETERS_DIR}" -print0 -type f | xargs -0 -i basename {} | grep -E ".desktop$" | sed "s|.desktop$||g" | grep -xv "xgreeters") 2> /dev/null )
+    printf "%s\n" "${greeter_list[@]}" | sort | uniq
+}
+
 #== LightDM用コマンド ==#
 # greeter-changeコマンド
 command_lightdm_greeter_change() {
@@ -586,7 +594,7 @@ command_lightdm_greeter_change() {
     fi
 
     # 指定されたGreeterが正しいか確認
-    if ! printf "%s\n" "${LIGHTDM_GREETERS[@]}" | grep -x "${1}" > /dev/null 2>&2; then
+    if ! lightdm_greeter_list | grep -x "${1}" > /dev/null 2>&2; then
         msg_error "The greeter (${1}) doesn't exist."
         exit 1
     else
@@ -629,7 +637,7 @@ EOF
 command_lightdm_greeter_list() {
     echo "Available Lightdm greeter list:"
     local _greeter
-    for _greeter in "${LIGHTDM_GREETERS[@]}"; do
+    for _greeter in $(lightdm_greeter_list); do
         if [[ "${_greeter}" = "${LIGHTDM_CURRENT_GREETER}" ]]; then
             echo " * ${_greeter}"
         else
@@ -641,14 +649,14 @@ command_lightdm_greeter_list() {
 # greeterコマンド
 run_greeter_wizard(){
     # グリーターの数を確認
-    if (( ${#LIGHTDM_GREETERS[@]} < 1 )); then
+    if (( $(lightdm_greeter_list | wc -l) < 1 )); then
         msg_error "LightDM Greeter was not found."
         exit 1
     fi
 
     # 質問する
     local _greeter
-    if ! _greeter="$(ask_question -p "Please select the greeter to use." -d "${LIGHTDM_CURRENT_GREETER}" "${LIGHTDM_GREETERS[@]}")"; then
+    if ! _greeter="$(ask_question -p "Please select the greeter to use." -d "${LIGHTDM_CURRENT_GREETER}" $(lightdm_greeter_list))"; then
         run_greeter_wizard
         exit 0
     fi
@@ -710,7 +718,11 @@ command_lightdm_edit(){
         msg_error "You cannot use this command in non-interactive mode."
         exit 1
     fi
-    for _config in "${LIGHTDM_LOADED_CONFIG[@]}"; do
+    local loaded_config_list
+    while read -r line; do
+        loaded_config_list+=("${line}")
+    done < <(printf "%s\n" "$(lightdm --show-config 2>&1 | grep -x -A "$(lightdm --show-config 2>&1 | wc -l)" "Sources:" | grep -v "Sources" | sed 's|^[A-Z]  ||g')"  | tr -d " ")
+    for _config in "${loaded_config_list[@]}"; do
         echo -ne "Edit ${_config} ? (y or n)> "
         read -r -n 1 _yes_or_no
         echo
@@ -830,7 +842,7 @@ command_gdm_logo(){
         exit 1
     fi
 
-    local _backgrounf_file="/usr/share/backgrounds/gdm/background"
+    local _backgrounf_file="${BACKGROUND_DIR}/gdm/background"
     mkdir -p "$(dirname "${_backgrounf_file}")"
     cp "${1}" "${_backgrounf_file}"
     chmod 644 "${_backgrounf_file}"
@@ -1044,7 +1056,7 @@ command_qtquick_back(){
         exit 1
     fi
 
-    local _backgrounf_file="/usr/share/backgrounds/lightdm/qtquick-greeter"
+    local _backgrounf_file="${BACKGROUND_DIR}/lightdm/qtquick-greeter"
     mkdir -p "$(dirname "${_backgrounf_file}")"
     cp "${1}" "${_backgrounf_file}"
     chmod 644 "${_backgrounf_file}"
@@ -1090,7 +1102,7 @@ command_slick_back(){
         exit 1
     fi
 
-    local _backgrounf_file="/usr/share/backgrounds/lightdm/slick-greeter"
+    local _backgrounf_file="${BACKGROUND_DIR}/lightdm/slick-greeter"
     mkdir -p "$(dirname "${_backgrounf_file}")"
     cp "${1}" "${_backgrounf_file}"
     chmod 644 "${_backgrounf_file}"
@@ -1416,7 +1428,7 @@ command_lxdm_back(){
         exit 1
     fi
 
-    local _backgrounf_file="/usr/share/backgrounds/lxdm/background"
+    local _backgrounf_file="${BACKGROUND_DIR}/lxdm/background"
     mkdir -p "$(dirname "${_backgrounf_file}")"
     cp "${1}" "${_backgrounf_file}"
     chmod 644 "${_backgrounf_file}"
@@ -1572,28 +1584,19 @@ declare -A GREETER_MODE=(
 
 
 #== CONFIGS ==#
-
 # LightDM - Greeterのディレクトリ
 LIGHTDM_GREETERS_DIR="$(lightdm_get_value "greeters-directory")"
 : "${LIGHTDM_GREETERS_DIR:="/usr/share/xgreeters"}"
-
-# LightDM - Greeter一覧
-#LIGHTDM_GREETERS=( $( )
-while read -r line; do
-    LIGHTDM_GREETERS+=("${line}")
-done < <( (find "${LIGHTDM_GREETERS_DIR}" -print0 -type f | xargs -0 -i basename {} | grep -E ".desktop$" | sed "s|.desktop$||g" | grep -xv "xgreeters") 2> /dev/null )
 
 # LightDM - 現在設定されているGreeter
 LIGHTDM_CURRENT_GREETER="$(lightdm --show-config 2>&1 | grep "greeter-session" | cut -d "=" -f 2)"
 : "${LIGHTDM_CURRENT_GREETER:="lightdm-gtk-greeter"}"
 
-# LightDM - 読み込まれた設定ファイルの一覧
-while read -r line; do
-    LIGHTDM_LOADED_CONFIG+=("${line}")
-done < <(printf "%s\n" "$(lightdm --show-config 2>&1 | grep -x -A "$(lightdm --show-config 2>&1 | wc -l)" "Sources:" | grep -v "Sources" | sed 's|^[A-Z]  ||g')"  | tr -d " ")
-
 # Global - エディタ
 USE_EDITOR="${EDITOR:-vi}"
+
+# Global - 背景画像をコピーするディレクトリ
+BACKGROUND_DIR="/usr/share/backgrounds"
 
 # Global - 現在のディスプレイマネージャ名
 CURRENT_DM="$(basename "$(readlink "/etc/systemd/system/display-manager.service")" | sed "s|.service$||g")"
