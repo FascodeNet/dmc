@@ -1148,11 +1148,11 @@ command_slick_icon_chenge(){
         msg_error "Please specify the icon theme to use."
         exit 1
     fi
-    if ! printf "%s\n" $(get_icon_theme) | grep -x "${1}" 1> /dev/null 2>&1; then
+    if ! printf "%s\n" "$(get_icon_theme)" | grep -x "${1}" 1> /dev/null 2>&1; then
         msg_error "${1} was not found."
         exit 1
     fi
-    slick_set_config "icon-theme-name" "${_icon}"
+    slick_set_config "icon-theme-name" "${1}"
 }
 
 
@@ -1490,7 +1490,7 @@ command_gtk_greeter_gtk_change(){
         msg_error "Please specify the theme"
         exit 1
     fi
-    if ! printf "%s\n" $(get_gtk_theme) | grep -x "${1}" 1> /dev/null 2>&1; then
+    if ! printf "%s\n" "$(get_gtk_theme)" | grep -x "${1}" 1> /dev/null 2>&1; then
         msg_error "${1} was not found."
         exit 1
     fi
@@ -1522,7 +1522,7 @@ command_gtk_greeter_icon_chenge(){
         msg_error "Please specify the icon theme to use."
         exit 1
     fi
-    if ! printf "%s\n" $(get_icon_theme) | grep -x "${1}" 1> /dev/null 2>&1; then
+    if ! printf "%s\n" "$(get_icon_theme)" | grep -x "${1}" 1> /dev/null 2>&1; then
         msg_error "${1} was not found."
         exit 1
     fi
