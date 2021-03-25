@@ -1635,7 +1635,7 @@ while true; do
             exit 0
             ;;
         -G | --lightdm-greeter)
-            if [[ ! -z "${LIGHTDM_CURRENT_GREETER+SET}" ]]; then
+            if [[ -n "${LIGHTDM_CURRENT_GREETER+SET}" ]]; then
                 DISPLAY_MANAGER="${GREETER_MODE["${LIGHTDM_CURRENT_GREETER}"]}"
             else
                 msg_error "Failed to get the currently running Greeter."
