@@ -49,17 +49,24 @@ script_usage(){
     echo "    accessibility [true or false]     Toggle whether to show accessibility menu"
     echo "    root-login [true or false]        Toggle whether to enable root login"
     echo
-    echo " Webkit2 command:"
+    echo " GTKG command: (lightdm-gtk-greeter)"
+    echo "    gtk                               Run gtk theme selection wizard"
+    echo "    gtk-change [theme]                Specify gtk theme"
+    echo "    icon                              Run icon theme selection wizard"
+    echo "    icon-change [icon]                Specify the icon theme"
+    echo
+    echo " Webkit2 command: (lightdm-webkit2-greeter)"
     echo "    theme                             Run theme selection wizard"
     echo "    theme-change [theme]              Specify the theme"
     echo
-    echo " Qtquick command:"
+    echo " Qtquick command: (lightdm-qtquick-greeter)"
     echo "    back                              Specify the background image"
     echo
-    echo " Slick command:"
+    echo " Slick command: (lightdm-slick-greeter)"
     echo "    back [image]                      Specify the background image"
     echo "    grid [true or false]              Toggle whether to show grid"
     echo "    icon                              Run icon theme selection wizard"
+    echo "    icon-change [icon]                Specify the icon theme"
     echo "    gtk                               Run gtk theme selection wizard"
     echo "    gtk-change [theme]                Specify gtk theme"
     echo
