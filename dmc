@@ -695,7 +695,7 @@ command_lightdm_greeter_edit(){
         exit 1
     fi
     local _greeter="${1:-${LIGHTDM_CURRENT_GREETER}}"
-    if [[ -z "${GREETER_CONFIG["${_greeter}"]+SET}" ]]; then
+    if [[ -z "${MODE_CONFIG[${GREETER_MODE["${_greeter}"]}]+SET}" ]]; then
         msg_error "This Greeter is not currently supported."
         msg_error "Please report the problem here."
         msg_error "https://github.com/FascodeNet/lightdm-config/issues"
@@ -707,7 +707,7 @@ command_lightdm_greeter_edit(){
             read -r
         fi
         set -u
-        bash -c "${USE_EDITOR} ${GREETER_CONFIG["${_greeter}"]}"
+        bash -c "${USE_EDITOR} ${MODE_CONFIG[${GREETER_MODE["${_greeter}"]}]}"
         exit
     fi
 }
@@ -967,20 +967,20 @@ command_gdm_root_login(){
 #== Webkit2用の汎用関数 ==#
 webkit2_init_configs(){
     check_root
-    if [[ ! -f "${GREETER_CONFIG["lightdm-webkit2-greeter"]}" ]]; then
-        mkdir -p "$(dirname "${GREETER_CONFIG["lightdm-webkit2-greeter"]}")"
-        touch "${GREETER_CONFIG["lightdm-webkit2-greeter"]}"
+    if [[ ! -f "${MODE_CONFIG["webkit2"]}" ]]; then
+        mkdir -p "$(dirname "${MODE_CONFIG["webkit2"]}")"
+        touch "${MODE_CONFIG["webkit2"]}"
     fi
 }
 
 # webkit2_get_value <section> <key>
 webkit2_get_value(){
-    crudini --get "${GREETER_CONFIG["lightdm-webkit2-greeter"]}" "${1}" "${2}"
+    crudini --get "${MODE_CONFIG["webkit2"]}" "${1}" "${2}"
 }
 
 # webkit2_set_config <section> <key> <value>
 webkit2_set_config(){
-    crudini --set "${GREETER_CONFIG["lightdm-webkit2-greeter"]}" "${1}" "${2}" "${3}"
+    crudini --set "${MODE_CONFIG["webkit2"]}" "${1}" "${2}" "${3}"
 }
 
 #== webkit2用コマンド ==#
@@ -1022,10 +1022,10 @@ command_webkit2_theme_change(){
 #== Qtquick用の汎用関数 ==#
 qtquick_init_configs(){
     check_root
-    if [[ ! -f "${GREETER_CONFIG["lightdm-qtquick-greeter"]}" ]] || [[ -z "$(cat "${GREETER_CONFIG["lightdm-qtquick-greeter"]}")" ]]; then
-        mkdir -p "$(dirname "${GREETER_CONFIG["lightdm-qtquick-greeter"]}")"
-        touch "${GREETER_CONFIG["lightdm-qtquick-greeter"]}"
-        #echo -e "{\n\n}\n" > "${GREETER_CONFIG["lightdm-qtquick-greeter"]}"
+    if [[ ! -f "${MODE_CONFIG["qtquick"]}" ]] || [[ -z "$(cat "${MODE_CONFIG["qtquick"]}")" ]]; then
+        mkdir -p "$(dirname "${MODE_CONFIG["qtquick"]}")"
+        touch "${MODE_CONFIG["qtquick"]}"
+        #echo -e "{\n\n}\n" > "${MODE_CONFIG["qtquick"]}"
         qtquick_set_config background_path "file:///hoge/fuga.png"
         qtquick_set_config theme "qrc:/Login.qml"
     fi
@@ -1033,16 +1033,16 @@ qtquick_init_configs(){
 
 #qtquick_get_value <key>
 qtquick_get_value(){
-    jq ".${1}" < "${GREETER_CONFIG["lightdm-qtquick-greeter"]}"
+    jq ".${1}" < "${MODE_CONFIG["qtquick"]}"
 }
 
 # command_qtquick_back <key> <value>
 qtquick_set_config(){
-    local _tempfile="/tmp/$(basename "${GREETER_CONFIG["lightdm-qtquick-greeter"]}")-$(base64 < "/dev/urandom" | fold -w 10 | head -n 1)"
-    cp "${GREETER_CONFIG["lightdm-qtquick-greeter"]}" "${_tempfile}"
-    #cat "${_tempfile}" | jq -r ".${1}|=\"${2}\"" > "${GREETER_CONFIG["lightdm-qtquick-greeter"]}"
-    jq -r ".${1}|=\"${2}\"" < "${_tempfile}" > "${GREETER_CONFIG["lightdm-qtquick-greeter"]}"
-    chmod 644 "${GREETER_CONFIG["lightdm-qtquick-greeter"]}"
+    local _tempfile="/tmp/$(basename "${MODE_CONFIG["qtquick"]}")-$(base64 < "/dev/urandom" | fold -w 10 | head -n 1)"
+    cp "${MODE_CONFIG["qtquick"]}" "${_tempfile}"
+    #cat "${_tempfile}" | jq -r ".${1}|=\"${2}\"" > "${MODE_CONFIG["qtquick"]}"
+    jq -r ".${1}|=\"${2}\"" < "${_tempfile}" > "${MODE_CONFIG["qtquick"]}"
+    chmod 644 "${MODE_CONFIG["qtquick"]}"
 }
 
 #== Qtquick用コマンド ==#
@@ -1066,19 +1066,19 @@ command_qtquick_back(){
 
 #== slick用の汎用関数 ==#
 slick_get_value(){
-    crudini --get "${GREETER_CONFIG["lightdm-slick-greeter"]}" "Greeter" "${1}"
+    crudini --get "${MODE_CONFIG["slick"]}" "Greeter" "${1}"
 }
 
 slick_set_config(){
-    crudini --set "${GREETER_CONFIG["lightdm-slick-greeter"]}" "Greeter" "${1}" "${2}"
+    crudini --set "${MODE_CONFIG["slick"]}" "Greeter" "${1}" "${2}"
 }
 
 slick_init_configs(){
     check_root
-    if [[ ! -f "${GREETER_CONFIG["lightdm-slick-greeter"]}" ]]; then
-        mkdir -p "$(dirname "${GREETER_CONFIG["lightdm-slick-greeter"]}")"
-        touch "${GREETER_CONFIG["lightdm-slick-greeter"]}"
-        echo "[Greeter]" > "${GREETER_CONFIG["lightdm-slick-greeter"]}"
+    if [[ ! -f "${MODE_CONFIG["slick"]}" ]]; then
+        mkdir -p "$(dirname "${MODE_CONFIG["slick"]}")"
+        touch "${MODE_CONFIG["slick"]}"
+        echo "[Greeter]" > "${MODE_CONFIG["slick"]}"
     fi
 }
 
@@ -1463,24 +1463,24 @@ command_lxdm_gtk_change(){
 #== GTk Greeter用の汎用関数 ==#
 # gtk_greeter_get_value <section> <key>
 gtk_greeter_get_value(){
-    crudini --set "${GREETER_CONFIG["lightdm-gtk-greeter"]}" "${1}" "${2}"
+    crudini --set "${MODE_CONFIG["gtkg"]}" "${1}" "${2}"
 }
 
 # gtk_greeter_set_config <section> <key> <value>
 gtk_greeter_set_config(){
-    crudini --set "${GREETER_CONFIG["lightdm-gtk-greeter"]}" "${1}" "${2}" "${3}"
+    crudini --set "${MODE_CONFIG["gtkg"]}" "${1}" "${2}" "${3}"
 }
 
 # gtk_greeter_remove_key <section> <key>
 gtk_greeter_remove_key(){
-    crudini --del "${GREETER_CONFIG["lightdm-gtk-greeter"]}" "${1}" "${2}"
+    crudini --del "${MODE_CONFIG["gtkg"]}" "${1}" "${2}"
 }
 
 gtk_greeter_init_configs(){
     check_root
-    if [[ ! -f "${GREETER_CONFIG["lightdm-gtk-greeter"]}" ]]; then
-        mkdir -p "$(dirname "${GREETER_CONFIG["lightdm-gtk-greeter"]}")"
-        touch "${GREETER_CONFIG["lightdm-gtk-greeter"]}"
+    if [[ ! -f "${MODE_CONFIG["gtkg"]}" ]]; then
+        mkdir -p "$(dirname "${MODE_CONFIG["gtkg"]}")"
+        touch "${MODE_CONFIG["gtkg"]}"
     fi
 }
 
@@ -1543,21 +1543,18 @@ command_gtk_greeter_icon_chenge(){
 
 
 #== 設定ファイルのパス ==#
-declare -A GREETER_CONFIG=(
-    ["lightdm-webkit2-greeter"]="/etc/lightdm/lightdm-webkit2-greeter.conf"
-    ["lightdm-slick-greeter"]="/etc/lightdm/slick-greeter.conf"
-    ["lightdm-gtk-greeter"]="/etc/lightdm/lightdm-gtk-greeter.conf"
-    ["io.elementary.greeter"]="/etc/lightdm/io.elementary.greeter.conf"
-    ["lightdm-mini-greeter"]="/etc/lightdm/lightdm-mini-greeter.conf"
-    ["lightdm-qtquick-greeter"]="/etc/lightdm/lightdm-qtquick-greeter.json"
-)
-
 declare -A MODE_CONFIG=(
     ["lightdm"]="/etc/lightdm/lightdm.conf.d/00-dmc-lightdm.conf"
     ["gdm-dconf"]="/etc/dconf/db/gdm.d/00-dmc-gdm"
     ["gdm-custom"]="/etc/gdm/custom.conf"
     ["sddm"]="/etc/sddm.conf.d/sddm.conf"
     ["lxdm"]="/etc/lxdm/lxdm.conf"
+    ["webkit2"]="/etc/lightdm/lightdm-webkit2-greeter.conf"
+    ["slick"]="/etc/lightdm/slick-greeter.conf"
+    ["gtkg"]="/etc/lightdm/lightdm-gtk-greeter.conf"
+    ["elementary"]="/etc/lightdm/io.elementary.greeter.conf"
+    ["mini"]="/etc/lightdm/lightdm-mini-greeter.conf"
+    ["qtquick"]="/etc/lightdm/lightdm-qtquick-greeter.json"
 )
 
 declare -A MAIN_BINARY=(
