@@ -43,6 +43,7 @@ script_usage(){
     echo "    cursor                            Run cursor selection wizard"
     echo "    cursor-change [cursor]            Specify the cursor theme"
     echo "    cursor-list                       Show a list of cursor theme"
+    echo "    edit                              Edit config file"
     echo "    sound [true or false]             Toggle the sound when an event occurs"
     echo "    logo [image]                      Specify the logo of the login screen"
     echo "    tap [true or false]               Toggle whether to recognize the tap as a click"
@@ -906,6 +907,14 @@ command_gdm_tap(){
     gdm_dconf_set_config "org/gnome/desktop/peripherals/touchpad" "tap-to-click" "${_arg}"
 }
 
+command_gdm_edit(){
+    if [[ "${NON_INTERACTIVE}" = true ]]; then
+        msg_error "You cannot use this command in non-interactive mode."
+        exit 1
+    fi
+    bash -c "${USE_EDITOR} ${MODE_CONFIG["gdm-custom"]}"
+}
+
 # autologin
 command_gdm_auto_login(){
     if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
@@ -1738,9 +1747,17 @@ case "${COMMAND}" in
         command_lightdm_remove
         ;;
     "edit")
-        check_command_dm "lightdm"
-        check_root
-        command_lightdm_edit
+        check_command_dm "lightdm" "gdm"
+        case "${MODE}" in
+            "lightdm")
+                check_root
+                command_lightdm_edit
+                ;;
+            "gdm")
+                gdm_init_configs
+                command_gdm_edit
+                ;;
+        esac
         ;;
     "show-config")
         check_command_dm "lightdm"
