@@ -1899,7 +1899,7 @@ case "${COMMAND}" in
         ;;
     "icon-change")
         check_command_dm "slick" "gtkg"
-        case "${DISPLAY_MANAGER}"; in
+        case "${DISPLAY_MANAGER}" in
             "slick")
                 slick_init_configs
                 command_slick_icon_chenge "${COMMAND_ARGS}"
