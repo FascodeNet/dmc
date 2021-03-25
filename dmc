@@ -306,10 +306,10 @@ ask_question(){
         _choice="${_choice_list[$(( _count - 1 ))]}"
         if [[ ! "${_default}" = "" ]] && [[ "${_choice}" = "${_default}" ]]; then
             #echo " * ${_count}: ${_choice}" >&2
-            printf " * %${_digit}d: ${_choice}\n" "${_count}"
+            printf " * %${_digit}d: ${_choice}\n" "${_count}" >&2
         else
             #echo "   ${_count}: ${_choice}" >&2
-            printf "   %${_digit}d: ${_choice}\n" "${_count}"
+            printf "   %${_digit}d: ${_choice}\n" "${_count}" >&2
         fi
         unset _choice
     done
