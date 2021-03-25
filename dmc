@@ -291,7 +291,7 @@ ask_question(){
     done
     shift $((OPTIND - 1))
     _choice_list=("${@}")
-    _digit="$(expr length "${#}")"
+    _digit="${##}"
 
     # 選択肢に関するエラー
     if (( ${#_choice_list[@]} < 0 )); then
