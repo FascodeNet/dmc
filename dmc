@@ -103,7 +103,7 @@ script_usage(){
     echo "    Display managers: lightdm, gdm, sddm, lxdm"
     echo "    LightDM greeters: webkit2, qtquick, slick, gtkg"
     echo
-    echo " Default mode: ${DISPLAY_MANAGER}"
+    echo " Default mode: ${MODE}"
     echo
     echo " This tool is incomplete and still under development."
     echo " If you find a bug, please report it on GitHub."
@@ -176,17 +176,17 @@ jq(){
 
 # 指定されたコマンドが現在のモードで実行可能かどうかを判定する
 check_command_dm(){
-    if ! printf "%s\n" "${@}" | grep -xE "${DISPLAY_MANAGER}" >/dev/null 2>&1; then
-        msg_error "This command (${COMMAND}) is not available in the current mode (${DISPLAY_MANAGER})."
+    if ! printf "%s\n" "${@}" | grep -xE "${MODE}" >/dev/null 2>&1; then
+        msg_error "This command (${COMMAND}) is not available in the current mode (${MODE})."
         exit 1
     fi
 }
 
 # 現在のモードのメインバイナリが存在しているかどうか確認する
 check_main_binary(){
-    if [[ -z "${MAIN_BINARY["${DISPLAY_MANAGER}"]+SET}" ]]; then
+    if [[ -z "${MAIN_BINARY["${MODE}"]+SET}" ]]; then
         msg_warn "The main binary for the selected mode is not set."
-    elif [[ ! -f "${MAIN_BINARY["${DISPLAY_MANAGER}"]}" ]]; then
+    elif [[ ! -f "${MAIN_BINARY["${MODE}"]}" ]]; then
         msg_error "The target for the selected mode is not installed."
         exit 1
     fi
@@ -532,7 +532,7 @@ lightdm_get_source_file(){
 
 # 設定ファイルの値を変更する
 lightdm_set_config(){
-    local key="${1}" value="${2}" file=${3-${DISPLAY_MANAGER_CONFIG["lightdm"]}}
+    local key="${1}" value="${2}" file=${3-${MODE_CONFIG["lightdm"]}}
     if [[ "${WRITE_ALL_FILES}" = true ]] && [[ -n "$(lightdm_get_source_file "${1}")" ]]; then
         crudini --set "$(lightdm_get_source_file "${1}")" 'Seat:*' "${key}" "${value}"
     else
@@ -548,19 +548,19 @@ lightdm_set_config(){
 # 設定ファイルのキーを削除する
 lightdm_remove_key(){
     local key="${1}" _config
-    if grep -E "^ ?${key}.+" "${DISPLAY_MANAGER_CONFIG["lightdm"]}" 1>/dev/null 2>&1; then
-        sed -i -r "s|^ ?${key} ?=.+||g" "${DISPLAY_MANAGER_CONFIG["lightdm"]}"
-        sed -i '/^$/d' "${DISPLAY_MANAGER_CONFIG["lightdm"]}"
+    if grep -E "^ ?${key}.+" "${MODE_CONFIG["lightdm"]}" 1>/dev/null 2>&1; then
+        sed -i -r "s|^ ?${key} ?=.+||g" "${MODE_CONFIG["lightdm"]}"
+        sed -i '/^$/d' "${MODE_CONFIG["lightdm"]}"
     fi
 }
 
 # 設定ファイルを作成
 lightdm_init_configs(){
     check_root
-    if [[ ! -f "${DISPLAY_MANAGER_CONFIG["lightdm"]}" ]]; then
-        mkdir -p "$(dirname "${DISPLAY_MANAGER_CONFIG["lightdm"]}")"
-        touch "${DISPLAY_MANAGER_CONFIG["lightdm"]}"
-        echo "[Seat:*]" > "${DISPLAY_MANAGER_CONFIG["lightdm"]}"
+    if [[ ! -f "${MODE_CONFIG["lightdm"]}" ]]; then
+        mkdir -p "$(dirname "${MODE_CONFIG["lightdm"]}")"
+        touch "${MODE_CONFIG["lightdm"]}"
+        echo "[Seat:*]" > "${MODE_CONFIG["lightdm"]}"
     fi
 }
 
@@ -676,14 +676,14 @@ run_greeter_wizard(){
 
 # removeコマンド
 command_lightdm_remove(){
-    if [[ ! -f "${DISPLAY_MANAGER_CONFIG["lightdm"]}" ]]; then
+    if [[ ! -f "${MODE_CONFIG["lightdm"]}" ]]; then
         return 0
     else
         local _yes_or_no
         echo -ne "Are you sure you want to delete all settings?\nThis change is irreversible.\n (y or n) > "
         read -r -n 1 _yes_or_no
         if [[ "${_yes_or_no}" = "y" ]]; then
-            mv "${DISPLAY_MANAGER_CONFIG["lightdm"]}" "${DISPLAY_MANAGER_CONFIG["lightdm"]}.disabled"
+            mv "${MODE_CONFIG["lightdm"]}" "${MODE_CONFIG["lightdm"]}.disabled"
         fi
     fi
 }
@@ -788,7 +788,7 @@ gdm_init_configs(){
     fi
 
     local _file
-    for _file in "${DISPLAY_MANAGER_CONFIG["gdm-dconf"]}" "${DISPLAY_MANAGER_CONFIG["gdm-custom"]}"; do
+    for _file in "${MODE_CONFIG["gdm-dconf"]}" "${MODE_CONFIG["gdm-custom"]}"; do
         if [[ ! -f "${_file}" ]]; then
             mkdir -p "$(dirname "${_file}")"
             touch "${_file}"
@@ -799,9 +799,9 @@ gdm_init_configs(){
 # gdm_dconf_set_config <dconf path> <key> <value>
 gdm_dconf_set_config(){
     if check_int "${3}" || check_bool "${3}"; then
-        crudini --set "${DISPLAY_MANAGER_CONFIG["gdm-dconf"]}" "${1}" "${2}" "${3}"
+        crudini --set "${MODE_CONFIG["gdm-dconf"]}" "${1}" "${2}" "${3}"
     else
-        crudini --set "${DISPLAY_MANAGER_CONFIG["gdm-dconf"]}" "${1}" "${2}" "\"${3}\""
+        crudini --set "${MODE_CONFIG["gdm-dconf"]}" "${1}" "${2}" "\"${3}\""
     fi
     gdm_update
 }
@@ -813,15 +813,15 @@ gdm_dconf_get_value(){
 
 # gdm_custom_get_value <section> <key>
 gdm_custom_get_value(){
-    crudini --get "${DISPLAY_MANAGER_CONFIG["gdm-custom"]}" "${1}" "${2}"
+    crudini --get "${MODE_CONFIG["gdm-custom"]}" "${1}" "${2}"
 }
 
 # gdm_custom_set_config <section> <key> <value>
 gdm_custom_set_config(){
     if check_int "${3}" || check_bool "${3}"; then
-        crudini --set "${DISPLAY_MANAGER_CONFIG["gdm-custom"]}" "${1}" "${2}" "${3}"
+        crudini --set "${MODE_CONFIG["gdm-custom"]}" "${1}" "${2}" "${3}"
     else
-        crudini --set "${DISPLAY_MANAGER_CONFIG["gdm-custom"]}" "${1}" "${2}" "\"${3}\""
+        crudini --set "${MODE_CONFIG["gdm-custom"]}" "${1}" "${2}" "\"${3}\""
     fi
     gdm_update
 }
@@ -1171,25 +1171,25 @@ command_slick_icon_chenge(){
 #== SDDM用の汎用関数 ==#
 # sddm_get_value <section> <key> <valye>
 sddm_get_value(){
-    crudini --set "${DISPLAY_MANAGER_CONFIG["sddm"]}" "${1}" "${2}"
+    crudini --set "${MODE_CONFIG["sddm"]}" "${1}" "${2}"
 }
 
 # sddm_set_config <section> <key> <value>
 sddm_set_config(){
-    crudini --set "${DISPLAY_MANAGER_CONFIG["sddm"]}" "${1}" "${2}" "${3}"
+    crudini --set "${MODE_CONFIG["sddm"]}" "${1}" "${2}" "${3}"
 }
 
 # sddm_remove_key <section> <key>
 sddm_remove_key(){
-    crudini --del "${DISPLAY_MANAGER_CONFIG["sddm"]}" "${1}" "${2}"
+    crudini --del "${MODE_CONFIG["sddm"]}" "${1}" "${2}"
 }
 
 
 sddm_init_configs(){
     check_root
-    if [[ ! -f "${DISPLAY_MANAGER_CONFIG["sddm"]}" ]]; then
-        mkdir -p "$(dirname "${DISPLAY_MANAGER_CONFIG["sddm"]}")"
-        sddm --example-config > "${DISPLAY_MANAGER_CONFIG["sddm"]}"
+    if [[ ! -f "${MODE_CONFIG["sddm"]}" ]]; then
+        mkdir -p "$(dirname "${MODE_CONFIG["sddm"]}")"
+        sddm --example-config > "${MODE_CONFIG["sddm"]}"
     fi
 }
 
@@ -1324,25 +1324,25 @@ command_sddm_theme_change(){
 #== LXDM用の汎用関数 ==#
 # sddm_get_value <section> <key> <valye>
 lxdm_get_value(){
-    crudini --set "${DISPLAY_MANAGER_CONFIG["lxdm"]}" "${1}" "${2}"
+    crudini --set "${MODE_CONFIG["lxdm"]}" "${1}" "${2}"
 }
 
 # sddm_set_config <section> <key> <value>
 lxdm_set_config(){
-    crudini --set "${DISPLAY_MANAGER_CONFIG["lxdm"]}" "${1}" "${2}" "${3}"
+    crudini --set "${MODE_CONFIG["lxdm"]}" "${1}" "${2}" "${3}"
 }
 
 # sddm_remove_key <section> <key>
 lxdm_remove_key(){
-    crudini --del "${DISPLAY_MANAGER_CONFIG["lxdm"]}" "${1}" "${2}"
+    crudini --del "${MODE_CONFIG["lxdm"]}" "${1}" "${2}"
 }
 
 
 lxdm_init_configs(){
     check_root
-    if [[ ! -f "${DISPLAY_MANAGER_CONFIG["lxdm"]}" ]]; then
-        mkdir -p "$(dirname "${DISPLAY_MANAGER_CONFIG["lxdm"]}")"
-        touch "${DISPLAY_MANAGER_CONFIG["lxdm"]}"
+    if [[ ! -f "${MODE_CONFIG["lxdm"]}" ]]; then
+        mkdir -p "$(dirname "${MODE_CONFIG["lxdm"]}")"
+        touch "${MODE_CONFIG["lxdm"]}"
     fi
 }
 
@@ -1552,7 +1552,7 @@ declare -A GREETER_CONFIG=(
     ["lightdm-qtquick-greeter"]="/etc/lightdm/lightdm-qtquick-greeter.json"
 )
 
-declare -A DISPLAY_MANAGER_CONFIG=(
+declare -A MODE_CONFIG=(
     ["lightdm"]="/etc/lightdm/lightdm.conf.d/00-dmc-lightdm.conf"
     ["gdm-dconf"]="/etc/dconf/db/gdm.d/00-dmc-gdm"
     ["gdm-custom"]="/etc/gdm/custom.conf"
@@ -1602,8 +1602,8 @@ BACKGROUND_DIR="/usr/share/backgrounds"
 CURRENT_DM="$(basename "$(readlink "/etc/systemd/system/display-manager.service")" | sed "s|.service$||g")"
 
 # モード
-DISPLAY_MANAGER="${CURRENT_DM}"
-: "${DISPLAY_MANAGER:="lightdm"}"
+MODE="${CURRENT_DM}"
+: "${MODE:="lightdm"}"
 
 # dmc config
 NON_INTERACTIVE=false
@@ -1626,7 +1626,7 @@ unset OPT OPTS OPTL
 while true; do
     case "${1}" in
         -m | --mode)
-            DISPLAY_MANAGER="${2}"
+            MODE="${2}"
             shift 2
             ;;
         -e | --editor)
@@ -1639,7 +1639,7 @@ while true; do
             ;;
         -G | --lightdm-greeter)
             if [[ -n "${LIGHTDM_CURRENT_GREETER+SET}" ]]; then
-                DISPLAY_MANAGER="${GREETER_MODE["${LIGHTDM_CURRENT_GREETER}"]}"
+                MODE="${GREETER_MODE["${LIGHTDM_CURRENT_GREETER}"]}"
             else
                 msg_error "Failed to get the currently running Greeter."
                 exit 1
@@ -1691,7 +1691,7 @@ fi
 case "${COMMAND}" in
     "autologin")
         check_command_dm "lightdm" "gdm" "sddm" "lxdm"
-        case "${DISPLAY_MANAGER}" in
+        case "${MODE}" in
             "lightdm")
                 lightdm_init_configs
                 command_lightdm_auto_login "${COMMAND_ARGS}"
@@ -1750,7 +1750,7 @@ case "${COMMAND}" in
         ;;
     "cursor")
         check_command_dm "gdm" "sddm"
-        case "${DISPLAY_MANAGER}" in
+        case "${MODE}" in
             "gdm")
                 gdm_init_configs
                 command_gdm_cursor_wizard
@@ -1763,7 +1763,7 @@ case "${COMMAND}" in
         ;;
     "cursor-change")
         check_command_dm "gdm" "sddm"
-        case "${DISPLAY_MANAGER}" in
+        case "${MODE}" in
             "gdm")
                 gdm_init_configs
                 command_gdm_cursor_change "${COMMAND_ARGS}"
@@ -1781,7 +1781,7 @@ case "${COMMAND}" in
         ;;
     "logo")
         check_command_dm "gdm" "slick"
-        case "${DISPLAY_MANAGER}" in
+        case "${MODE}" in
             "gdm")
                 gdm_init_configs
                 command_gdm_logo "${COMMAND_ARGS}"
@@ -1809,7 +1809,7 @@ case "${COMMAND}" in
         ;;
     "theme")
         check_command_dm "webkit2" "sddm"
-        case "${DISPLAY_MANAGER}" in
+        case "${MODE}" in
             "webkit2")
                 webkit2_init_configs
                 command_webkit2_theme_wizard
@@ -1822,7 +1822,7 @@ case "${COMMAND}" in
         ;;
     "theme-change")
         check_command_dm "webkit2" "sddm"
-        case "${DISPLAY_MANAGER}" in
+        case "${MODE}" in
             "webkit2")
                 webkit2_init_configs
                 command_webkit2_theme_change "${COMMAND_ARGS}"
@@ -1835,7 +1835,7 @@ case "${COMMAND}" in
         ;;
     "gtk")
         check_command_dm "slick" "lxdm" "gtkg"
-        case "${DISPLAY_MANAGER}" in
+        case "${MODE}" in
             "slick")
                 slick_init_configs
                 command_slick_gtk_wizard
@@ -1852,7 +1852,7 @@ case "${COMMAND}" in
         ;;
     "gtk-change")
         check_command_dm "slick" "lxdm" "gtkg"
-        case "${DISPLAY_MANAGER}" in
+        case "${MODE}" in
             "slick")
                 slick_init_configs
                 command_slick_gtk_change "${COMMAND_ARGS}"
@@ -1867,7 +1867,7 @@ case "${COMMAND}" in
         ;;
     "back")
         check_command_dm "qtquick" "slick" "lxdm"
-        case "${DISPLAY_MANAGER}" in
+        case "${MODE}" in
             "qtquick")
                 qtquick_init_configs
                 command_qtquick_back "${COMMAND_ARGS}"
@@ -1889,7 +1889,7 @@ case "${COMMAND}" in
         ;;
     "icon")
         check_command_dm "slick" "gtkg"
-        case "${DISPLAY_MANAGER}" in
+        case "${MODE}" in
             "slick")
                 slick_init_configs
                 command_slick_icon_wizard
@@ -1902,7 +1902,7 @@ case "${COMMAND}" in
         ;;
     "icon-change")
         check_command_dm "slick" "gtkg"
-        case "${DISPLAY_MANAGER}" in
+        case "${MODE}" in
             "slick")
                 slick_init_configs
                 command_slick_icon_chenge "${COMMAND_ARGS}"
