@@ -1,13 +1,13 @@
 - Support display manager
   - ~~SDDM~~
   - ~~GDM~~
-  - LXDM
+  - ~~LXDM~~
 
 *There are no plans to support a discontinued display manager.*
 
 - Support LightDM greeter
   - ~~Webkit2 Greeter~~
-  - GTK Greeter
+  - ~~GTK Greeter~~
   - ~~Slick Greeter~~
   - Unity Greeter
   - Deepin Greeter

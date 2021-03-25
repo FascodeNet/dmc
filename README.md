@@ -14,11 +14,13 @@ Tested only on Arch Linux
 
 ## Supported Display manager and Greeter
 - LightDM
+- LXDM
 - GDM
 - SDDM
 - LightDM Qtquick Greeter
 - LightDM Slick Greeter
 - LightDM Webkit2 Greeter
+- LightDM GTK Greeter
 
 ## Warning
 This tool is currently under development.  
