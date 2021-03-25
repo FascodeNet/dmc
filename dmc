@@ -284,6 +284,7 @@ ask_question(){
     done
     shift $((OPTIND - 1))
     _choice_list=("${@}")
+    _digit="$(expr length "${#}")"
 
     # 選択肢に関するエラー
     if (( ${#_choice_list[@]} < 0 )); then
@@ -304,9 +305,11 @@ ask_question(){
     for (( _count=1; _count<=${#_choice_list[@]}; _count++)); do
         _choice="${_choice_list[$(( _count - 1 ))]}"
         if [[ ! "${_default}" = "" ]] && [[ "${_choice}" = "${_default}" ]]; then
-            echo " * ${_count}: ${_choice}" >&2
+            #echo " * ${_count}: ${_choice}" >&2
+            printf " * %${_digit}d: ${_choice}\n" "${_count}"
         else
-            echo "   ${_count}: ${_choice}" >&2
+            #echo "   ${_count}: ${_choice}" >&2
+            printf "   %${_digit}d: ${_choice}\n" "${_count}"
         fi
         unset _choice
     done
