@@ -656,6 +656,7 @@ run_greeter_wizard(){
 
     # 質問する
     local _greeter
+    # shellcheck disable=SC2046
     if ! _greeter="$(ask_question -p "Please select the greeter to use." -d "${LIGHTDM_CURRENT_GREETER}" $(lightdm_greeter_list))"; then
         run_greeter_wizard
         exit 0
