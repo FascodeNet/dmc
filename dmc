@@ -94,7 +94,7 @@ script_usage(){
     echo
     echo " Supported modes:"
     echo "    Display managers: lightdm, gdm, sddm, lxdm"
-    echo "    LightDM greeters: webkit2, qtquick, slick"
+    echo "    LightDM greeters: webkit2, qtquick, slick, gtkg"
     echo
     echo " Default mode: ${DISPLAY_MANAGER}"
     echo
@@ -1136,6 +1136,18 @@ command_slick_icon_wizard(){
     echo "Changed icon theme to ${_icon}"
 }
 
+command_slick_icon_chenge(){
+    if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
+        msg_error "Please specify the icon theme to use."
+        exit 1
+    fi
+    if ! printf "%s\n" $(get_icon_theme) | grep -x "${1}" 1> /dev/null 2>&1; then
+        msg_error "${1} was not found."
+        exit 1
+    fi
+    slick_set_config "icon-theme-name" "${_icon}"
+}
+
 
 #== SDDM用の汎用関数 ==#
 # sddm_get_value <section> <key> <valye>
@@ -1429,6 +1441,88 @@ command_lxdm_gtk_change(){
     lxdm_set_config "display" "gtk_theme" "${1}"
 }
 
+#== GTk Greeter用の汎用関数 ==#
+# gtk_greeter_get_value <section> <key>
+gtk_greeter_get_value(){
+    crudini --set "${GREETER_CONFIG["lightdm-gtk-greeter"]}" "${1}" "${2}"
+}
+
+# gtk_greeter_set_config <section> <key> <value>
+gtk_greeter_set_config(){
+    crudini --set "${GREETER_CONFIG["lightdm-gtk-greeter"]}" "${1}" "${2}" "${3}"
+}
+
+# gtk_greeter_remove_key <section> <key>
+gtk_greeter_remove_key(){
+    crudini --del "${GREETER_CONFIG["lightdm-gtk-greeter"]}" "${1}" "${2}"
+}
+
+gtk_greeter_init_configs(){
+    check_root
+    if [[ ! -f "${GREETER_CONFIG["lightdm-gtk-greeter"]}" ]]; then
+        mkdir -p "$(dirname "${GREETER_CONFIG["lightdm-gtk-greeter"]}")"
+        touch "${GREETER_CONFIG["lightdm-gtk-greeter"]}"
+    fi
+}
+
+#== GTk Greeter用のコマンド==#
+command_gtk_greeter_gtk_wizard(){
+    local _theme="$(ask_gtk_theme)"
+
+    # 結果に応じて処理を実行
+    if [[ -n "${_theme}" ]]; then
+        gtk_greeter_set_config "greeter" "theme-name" "${_theme}"
+    else
+        exit 1
+    fi
+    echo "Changed theme to ${_theme}"
+}
+
+command_gtk_greeter_gtk_change(){
+    if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
+        msg_error "Please specify the theme"
+        exit 1
+    fi
+    if ! printf "%s\n" $(get_gtk_theme) | grep -x "${1}" 1> /dev/null 2>&1; then
+        msg_error "${1} was not found."
+        exit 1
+    fi
+    gtk_greeter_set_config "greeter" "theme-name" "${1}"
+}
+
+command_gtk_greeter_icon_wizard(){
+    local icons
+    while read -r line; do icons+=("${line}"); done < <(get_icon_theme)
+
+    local _icon
+    echo "Please select the icon theme to use."
+    if ! _icon="$(ask_question "${icons[@]}")"; then
+        command_gtk_greeter_icon_wizard
+        exit 0
+    fi
+
+    if [[ -n "${_icon}" ]]; then
+        gtk_greeter_set_config "greeter" "icon-theme-name" "${_icon}"
+    else
+        command_gtk_greeter_icon_wizard
+        exit 0
+    fi
+    echo "Changed icon theme to ${_icon}"
+}
+
+command_gtk_greeter_icon_chenge(){
+    if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
+        msg_error "Please specify the icon theme to use."
+        exit 1
+    fi
+    if ! printf "%s\n" $(get_icon_theme) | grep -x "${1}" 1> /dev/null 2>&1; then
+        msg_error "${1} was not found."
+        exit 1
+    fi
+    gtk_greeter_set_config "greeter" "icon-theme-name" "${_icon}"
+}
+
+
 #== 設定ファイルのパス ==#
 declare -A GREETER_CONFIG=(
     ["lightdm-webkit2-greeter"]="/etc/lightdm/lightdm-webkit2-greeter.conf"
@@ -1453,7 +1547,7 @@ declare -A MAIN_BINARY=(
     ["sddm"]="/usr/bin/sddm"
     ["webkit2"]="/usr/bin/lightdm-webkit2-greeter"
     ["slick"]="/usr/bin/slick-greeter"
-    #["gtk"]="/usr/bin/lightdm-gtk-greeter"
+    ["gtkg"]="/usr/bin/lightdm-gtk-greeter"
     ["elementary"]="/usr/bin/io.elementary.greeter"
     ["mini"]="/usr/bin/lightdm-mini-greeter"
     ["qtquick"]="/usr/bin/lightdm-qtquick-greeter"
@@ -1466,6 +1560,7 @@ declare -A GREETER_MODE=(
     ["io.elementary.greeter"]="elementary"
     ["lightdm-mini-greeter"]="mini"
     ["lightdm-qtquick-greeter"]="qtquick"
+    ["lightdm-gtk-greeter"]="gtkg"
 )
 
 
@@ -1729,7 +1824,7 @@ case "${COMMAND}" in
         esac
         ;;
     "gtk")
-        check_command_dm "slick" "lxdm"
+        check_command_dm "slick" "lxdm" "gtkg"
         case "${DISPLAY_MANAGER}" in
             "slick")
                 slick_init_configs
@@ -1739,10 +1834,14 @@ case "${COMMAND}" in
                 lxdm_init_configs
                 command_lxdm_gtk_wizard
                 ;;
+            "gtkg")
+                gtk_greeter_init_configs
+                command_gtk_greeter_gtk_wizard
+                ;;
         esac
         ;;
     "gtk-change")
-        check_command_dm "slick" "lxdm"
+        check_command_dm "slick" "lxdm" "gtkg"
         case "${DISPLAY_MANAGER}" in
             "slick")
                 slick_init_configs
@@ -1750,6 +1849,9 @@ case "${COMMAND}" in
                 ;;
             "lxdm")
                 command_lxdm_gtk_change "${COMMAND_ARGS}"
+                ;;
+            "gtkg")
+                command_gtk_greeter_gtk_change "${COMMAND_ARGS}"
                 ;;
         esac
         ;;
@@ -1776,9 +1878,30 @@ case "${COMMAND}" in
         command_slick_grid "${COMMAND_ARGS}"
         ;;
     "icon")
-        check_command_dm "slick"
-        slick_init_configs
-        command_slick_icon_wizard
+        check_command_dm "slick" "gtkg"
+        case "${DISPLAY_MANAGER}" in
+            "slick")
+                slick_init_configs
+                command_slick_icon_wizard
+                ;;
+            "gtkg")
+                gtk_greeter_init_configs
+                command_gtk_greeter_icon_wizard
+                ;;
+        esac
+        ;;
+    "icon-change")
+        check_command_dm "slick" "gtkg"
+        case "${DISPLAY_MANAGER}"; in
+            "slick")
+                slick_init_configs
+                command_slick_icon_chenge "${COMMAND_ARGS}"
+                ;;
+            "gtkg")
+                gtk_greeter_init_configs
+                command_gtk_greeter_icon_chenge "${COMMAND_ARGS}"
+                ;;
+        esac
         ;;
     "other-monitor")
         check_command_dm "slick"
@@ -1818,7 +1941,7 @@ case "${COMMAND}" in
     "dm")
         command_general_dm "${COMMAND_ARGS}"
         ;;
-    "lightdm" | "gdm" | "sddm" | "lxdm" | "webkit2" | "qtquick" | "slick")
+    "lightdm" | "gdm" | "sddm" | "lxdm" | "webkit2" | "qtquick" | "slick" | "gtkg")
         command_mode "${COMMAND}" "${COMMAND_ARGS}"
         ;;
     *)
