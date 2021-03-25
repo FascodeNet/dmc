@@ -647,7 +647,7 @@ command_lightdm_greeter_list() {
 }
 
 # greeterコマンド
-run_greeter_wizard(){
+command_lightdm_greeter_wizard(){
     # グリーターの数を確認
     if (( $(lightdm_greeter_list | wc -l) < 1 )); then
         msg_error "LightDM Greeter was not found."
@@ -658,7 +658,7 @@ run_greeter_wizard(){
     local _greeter
     # shellcheck disable=SC2046
     if ! _greeter="$(ask_question -p "Please select the greeter to use." -d "${LIGHTDM_CURRENT_GREETER}" $(lightdm_greeter_list))"; then
-        run_greeter_wizard
+        command_lightdm_greeter_wizard
         exit 0
     fi
 
@@ -666,7 +666,7 @@ run_greeter_wizard(){
     if [[ -n "${_greeter}" ]]; then
         command_lightdm_greeter_change "${_greeter}"
     else
-        run_greeter_wizard
+        command_lightdm_greeter_wizard
         exit 0
     fi
 
@@ -858,7 +858,7 @@ command_gdm_cursor_wizard(){
 
     # 一覧を生成
     if ! _cursor_theme="$(ask_question -d "${_current_theme}" -p "Please select the cursor theme to use." "${cursor_themes[@]}")"; then
-        run_greeter_wizard
+        command_gdm_cursor_wizard
         exit 0
     fi
 
@@ -994,7 +994,7 @@ command_webkit2_theme_wizard(){
     local _current_theme=$(webkit2_get_value greeter webkit_theme | sed "s|\"||g")
     local _theme
     if ! _theme="$(ask_question -d "${_current_theme}" -p "Please select the theme to use." "${_theme_list[@]}")"; then
-        run_greeter_wizard
+        command_webkit2_theme_wizard
         exit 0
     fi
     if [[ -n "${_theme}" ]]; then
@@ -1711,7 +1711,7 @@ case "${COMMAND}" in
     "greeter")
         check_command_dm "lightdm"
         lightdm_init_configs
-        run_greeter_wizard
+        command_lightdm_greeter_wizard
         ;;
     "greeter-change")
         check_command_dm "lightdm"
