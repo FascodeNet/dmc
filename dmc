@@ -49,6 +49,7 @@ script_usage(){
     echo "    tap [true or false]               Toggle whether to recognize the tap as a click"
     echo "    accessibility [true or false]     Toggle whether to show accessibility menu"
     echo "    root-login [true or false]        Toggle whether to enable root login"
+    echo "    remove                            Removes all settings"
     echo
     echo " GTKG command: (lightdm-gtk-greeter)"
     echo "    gtk                               Run gtk theme selection wizard"
@@ -59,9 +60,11 @@ script_usage(){
     echo " Webkit2 command: (lightdm-webkit2-greeter)"
     echo "    theme                             Run theme selection wizard"
     echo "    theme-change [theme]              Specify the theme"
+    echo "    remove                            Removes all settings"
     echo
     echo " Qtquick command: (lightdm-qtquick-greeter)"
     echo "    back                              Specify the background image"
+    echo "    remove                            Removes all settings"
     echo
     echo " Slick command: (lightdm-slick-greeter)"
     echo "    back [image]                      Specify the background image"
@@ -99,6 +102,7 @@ script_usage(){
     echo "    --no-check-target                 No check the target for the selected mode"
     echo "    --noroot                          No check root permission"
     echo "    --write-all-files                 Allows rewriting of all configuration files"
+    echo "    --remove                          Remove the file instead of renaming it with the remove command"
     echo
     echo " Supported modes:"
     echo "    Display managers: lightdm, gdm, sddm, lxdm"
@@ -463,6 +467,35 @@ check_systemd_unit(){
     return 1
 }
 
+# removeコマンドの共通処理
+# 引数に削除したいファイルへのパス
+common_remove_command(){
+    local _file _yes_or_no
+    for _file in "${@}"; do
+        if [[ -f "${_file}" ]]; then
+            if [[ "${NON_INTERACTIVE}" = true ]]; then
+                _yes_or_no="y"
+            else
+                echo -e "Remove ${_file} ? It is irreversible"
+                echo -ne "(y or n) > "
+                read -r -n 1 _yes_or_no
+                echo
+            fi
+            if [[ "${_yes_or_no}" = "y" ]]; then
+                if [[ "${REMOVE_FILES}" = true ]]; then
+                    echo "Removed ${_file}"
+                    rm -rf "${_file}"
+                else
+                    echo "Moved ${_file} ${_file}.disabled"
+                    mv "${_file}" "${_file}.disabled"
+                fi
+            fi
+        else
+            continue
+        fi
+    done
+}
+
 #== すべてのモード用コマンド ==#
 command_general_dm(){
     if [[ -z "${1}" ]] || [[ "${1}" = "" ]]; then
@@ -678,16 +711,7 @@ command_lightdm_greeter_wizard(){
 
 # removeコマンド
 command_lightdm_remove(){
-    if [[ ! -f "${MODE_CONFIG["lightdm"]}" ]]; then
-        return 0
-    else
-        local _yes_or_no
-        echo -ne "Are you sure you want to delete all settings?\nThis change is irreversible.\n (y or n) > "
-        read -r -n 1 _yes_or_no
-        if [[ "${_yes_or_no}" = "y" ]]; then
-            mv "${MODE_CONFIG["lightdm"]}" "${MODE_CONFIG["lightdm"]}.disabled"
-        fi
-    fi
+    common_remove_command "${MODE_CONFIG["lightdm"]}"
 }
 
 # greeter-edit
@@ -915,6 +939,10 @@ command_gdm_edit(){
     bash -c "${USE_EDITOR} ${MODE_CONFIG["gdm-custom"]}"
 }
 
+command_gdm_remove(){
+    common_remove_command "${MODE_CONFIG["gdm-custom"]}"
+}
+
 # autologin
 command_gdm_auto_login(){
     if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
@@ -1029,6 +1057,10 @@ command_webkit2_theme_change(){
     webkit2_set_config "greeter" "webkit_theme" "${1}"
 }
 
+command_webkit2_remove(){
+    common_remove_command "${MODE_CONFIG["webkit2"]}"
+}
+
 #== Qtquick用の汎用関数 ==#
 qtquick_init_configs(){
     check_root
@@ -1053,6 +1085,10 @@ qtquick_set_config(){
     #cat "${_tempfile}" | jq -r ".${1}|=\"${2}\"" > "${MODE_CONFIG["qtquick"]}"
     jq -r ".${1}|=\"${2}\"" < "${_tempfile}" > "${MODE_CONFIG["qtquick"]}"
     chmod 644 "${MODE_CONFIG["qtquick"]}"
+}
+
+qtquick_command_remove(){
+    common_remove_command "${MODE_CONFIG["qtquick"]}"
 }
 
 #== Qtquick用コマンド ==#
@@ -1120,7 +1156,6 @@ command_slick_back(){
     slick_set_config "background" "${_backgrounf_file}"
 }
 
-
 command_slick_gtk_wizard(){
     local _theme="$(ask_gtk_theme)"
 
@@ -1175,6 +1210,10 @@ command_slick_icon_chenge(){
         exit 1
     fi
     slick_set_config "icon-theme-name" "${1}"
+}
+
+command_slick_remove(){
+    common_remove_command "${MODE_CONFIG["slick"]}"
 }
 
 
@@ -1617,11 +1656,12 @@ NON_INTERACTIVE=false
 WRITE_ALL_FILES=false
 NOROOT=false
 NO_CHECK_TARGET=false
+REMOVE_FILES=false
 
 #== 引数解析 ==#
 ARGUMENT="${*}"
 OPTS="m:e:hG"
-OPTL="mode:,editor:,help,non-interactive,noroot,write-all-files,no-check-target,lightdm-greeter"
+OPTL="mode:,editor:,help,non-interactive,noroot,write-all-files,no-check-target,lightdm-greeter,remove"
 # shellcheck disable=SC2086
 if ! OPT="$(getopt -o ${OPTS} -l ${OPTL} -- ${ARGUMENT})"; then
     exit 1
@@ -1667,6 +1707,10 @@ while true; do
             ;;
         --write-all-files)
             WRITE_ALL_FILES=true
+            shift 1
+            ;;
+        --remove)
+            REMOVE_FILES=true
             shift 1
             ;;
         --)
@@ -1742,9 +1786,9 @@ case "${COMMAND}" in
         command_lightdm_greeter_edit "${COMMAND_ARGS}"
         ;;
     "remove")
-        check_command_dm "lightdm"
+        check_command_dm "lightdm" "gdm" "webkit2" "qtquick"
         check_root
-        command_lightdm_remove
+        eval "command_${MODE}_remove"
         ;;
     "edit")
         check_command_dm "lightdm" "gdm"
