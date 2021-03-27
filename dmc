@@ -61,6 +61,7 @@ script_usage(){
     echo "    theme                             Run theme selection wizard"
     echo "    theme-change [theme]              Specify the theme"
     echo "    remove                            Removes all settings"
+    echo "    debug [true or false]             Toggle debug mode"
     echo
     echo " Qtquick command: (lightdm-qtquick-greeter)"
     echo "    back                              Specify the background image"
@@ -1061,6 +1062,15 @@ command_webkit2_remove(){
     common_remove_command "${MODE_CONFIG["webkit2"]}"
 }
 
+command_webkit2_debug(){
+    local _arg="$(echo "${1-""}" | tr "[:upper:]" "[:lower:]")"
+    if ! check_bool "${_arg}"; then
+        msg_error "Please specify true or false"
+        exit 1
+    fi
+    webkit2_set_config "greeter" "debug_mode" "${_arg}"
+}
+
 #== Qtquick用の汎用関数 ==#
 qtquick_init_configs(){
     check_root
@@ -2012,6 +2022,10 @@ case "${COMMAND}" in
         ;;
     "lightdm" | "gdm" | "sddm" | "lxdm" | "webkit2" | "qtquick" | "slick" | "gtkg")
         command_mode "${COMMAND}" "${COMMAND_ARGS}"
+        ;;
+    "debug")
+        check_comamnd_dm "webkit2"
+        command_webkit2_debug "${COMMAND_ARGS}"
         ;;
     *)
         msg_error "This command cannot be used in any mode"
