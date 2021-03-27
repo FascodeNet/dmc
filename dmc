@@ -1750,6 +1750,11 @@ fi
 
 # コマンドとモードに応じて関数を実行する
 case "${COMMAND}" in
+    "accessibility")
+        check_command_dm "gdm"
+        gdm_init_configs
+        command_gdm_accessibility "${COMMAND_ARGS}"
+        ;;
     "autologin")
         check_command_dm "lightdm" "gdm" "sddm" "lxdm"
         case "${MODE}" in
@@ -1771,51 +1776,22 @@ case "${COMMAND}" in
                 ;;
         esac
         ;;
-    "greeter")
-        check_command_dm "lightdm"
-        lightdm_init_configs
-        command_lightdm_greeter_wizard
-        ;;
-    "greeter-change")
-        check_command_dm "lightdm"
-        lightdm_init_configs
-        command_lightdm_greeter_change "${COMMAND_ARGS}"
-        ;;
-    "greeter-create")
-        check_command_dm "lightdm"
-        lightdm_init_configs
-        command_lightdm_greeter_create "${COMMAND_ARGS}"
-        ;;
-    "greeter-list")
-        check_command_dm "lightdm"
-        command_lightdm_greeter_list
-        ;;
-    "greeter-edit")
-        check_command_dm "lightdm"
-        check_root
-        command_lightdm_greeter_edit "${COMMAND_ARGS}"
-        ;;
-    "remove")
-        check_command_dm "lightdm" "gdm" "webkit2" "qtquick"
-        check_root
-        eval "command_${MODE}_remove"
-        ;;
-    "edit")
-        check_command_dm "lightdm" "gdm"
+    "back")
+        check_command_dm "qtquick" "slick" "lxdm"
         case "${MODE}" in
-            "lightdm")
-                check_root
-                command_lightdm_edit
+            "qtquick")
+                qtquick_init_configs
+                command_qtquick_back "${COMMAND_ARGS}"
                 ;;
-            "gdm")
-                gdm_init_configs
-                command_gdm_edit
+            "slick")
+                slick_init_configs
+                command_slick_back "${COMMAND_ARGS}"
+                ;;
+            "back")
+                lxdm_init_configs
+                command_lxdm_back "${COMMAND_ARGS}"
                 ;;
         esac
-        ;;
-    "show-config")
-        check_command_dm "lightdm"
-        command_lightdm_show_config
         ;;
     "cursor")
         check_command_dm "gdm" "sddm"
@@ -1843,64 +1819,30 @@ case "${COMMAND}" in
                 ;;
         esac
         ;;
-    "sound")
-        check_command_dm "gdm"
-        gdm_init_configs
-        command_gdm_sound "${COMMAND_ARGS}"
+    "debug")
+        check_comamnd_dm "webkit2"
+        command_webkit2_debug "${COMMAND_ARGS}"
         ;;
-    "logo")
-        check_command_dm "gdm" "slick"
+    "dm")
+        command_general_dm "${COMMAND_ARGS}"
+        ;;
+    "edit")
+        check_command_dm "lightdm" "gdm"
         case "${MODE}" in
+            "lightdm")
+                check_root
+                command_lightdm_edit
+                ;;
             "gdm")
                 gdm_init_configs
-                command_gdm_logo "${COMMAND_ARGS}"
-                ;;
-            "slick")
-                slick_init_configs
-                command_slick_logo "${COMMAND_ARGS}"
+                command_gdm_edit
                 ;;
         esac
         ;;
-    "tap")
-        check_command_dm "gdm"
-        gdm_init_configs
-        command_gdm_tap "${COMMAND_ARGS}"
-        ;;
-    "accessibility")
-        check_command_dm "gdm"
-        gdm_init_configs
-        command_gdm_accessibility "${COMMAND_ARGS}"
-        ;;
-    "root-login")
-        check_command_dm "gdm"
-        gdm_init_configs
-        command_gdm_root_login "${COMMAND_ARGS}"
-        ;;
-    "theme")
-        check_command_dm "webkit2" "sddm"
-        case "${MODE}" in
-            "webkit2")
-                webkit2_init_configs
-                command_webkit2_theme_wizard
-                ;;
-            "sddm")
-                sddm_init_configs
-                command_sddm_theme_wizard
-                ;;
-        esac
-        ;;
-    "theme-change")
-        check_command_dm "webkit2" "sddm"
-        case "${MODE}" in
-            "webkit2")
-                webkit2_init_configs
-                command_webkit2_theme_change "${COMMAND_ARGS}"
-                ;;
-            "sddm")
-                sddm_init_configs
-                command_sddm_theme_change
-                ;;
-        esac
+    "edit-script")
+        check_command_dm "lxdm"
+        lxdm_init_configs
+        comamnd_lxdm_edit_script
         ;;
     "gtk")
         check_command_dm "slick" "lxdm" "gtkg"
@@ -1919,6 +1861,36 @@ case "${COMMAND}" in
                 ;;
         esac
         ;;
+    "greeter")
+        check_command_dm "lightdm"
+        lightdm_init_configs
+        command_lightdm_greeter_wizard
+        ;;
+    "greeter-change")
+        check_command_dm "lightdm"
+        lightdm_init_configs
+        command_lightdm_greeter_change "${COMMAND_ARGS}"
+        ;;
+    "greeter-create")
+        check_command_dm "lightdm"
+        lightdm_init_configs
+        command_lightdm_greeter_create "${COMMAND_ARGS}"
+        ;;
+    "greeter-edit")
+        check_command_dm "lightdm"
+        check_root
+        command_lightdm_greeter_edit "${COMMAND_ARGS}"
+        ;;
+    "greeter-list")
+        check_command_dm "lightdm"
+        command_lightdm_greeter_list
+        ;;
+
+    "grid")
+        check_command_dm "slick"
+        slick_init_configs
+        command_slick_grid "${COMMAND_ARGS}"
+        ;;
     "gtk-change")
         check_command_dm "slick" "lxdm" "gtkg"
         case "${MODE}" in
@@ -1933,28 +1905,6 @@ case "${COMMAND}" in
                 command_gtk_greeter_gtk_change "${COMMAND_ARGS}"
                 ;;
         esac
-        ;;
-    "back")
-        check_command_dm "qtquick" "slick" "lxdm"
-        case "${MODE}" in
-            "qtquick")
-                qtquick_init_configs
-                command_qtquick_back "${COMMAND_ARGS}"
-                ;;
-            "slick")
-                slick_init_configs
-                command_slick_back "${COMMAND_ARGS}"
-                ;;
-            "back")
-                lxdm_init_configs
-                command_lxdm_back "${COMMAND_ARGS}"
-                ;;
-        esac
-        ;;
-    "grid")
-        check_command_dm "slick"
-        slick_init_configs
-        command_slick_grid "${COMMAND_ARGS}"
         ;;
     "icon")
         check_command_dm "slick" "gtkg"
@@ -1982,20 +1932,43 @@ case "${COMMAND}" in
                 ;;
         esac
         ;;
-    "other-monitor")
-        check_command_dm "slick"
-        slick_init_configs
-        command_slick_other_monitor "${COMMAND_ARGS}"
+    "logo")
+        check_command_dm "gdm" "slick"
+        case "${MODE}" in
+            "gdm")
+                gdm_init_configs
+                command_gdm_logo "${COMMAND_ARGS}"
+                ;;
+            "slick")
+                slick_init_configs
+                command_slick_logo "${COMMAND_ARGS}"
+                ;;
+        esac
         ;;
     "numlock")
         check_command_dm "sddm"
         sddm_init_configs
         command_sddm_numlock "${COMMAND_ARGS}"
         ;;
-    "tty")
-        check_command_dm "sddm"
-        sddm_init_configs
-        command_sddm_tty "${COMMAND_ARGS}"
+    "other-monitor")
+        check_command_dm "slick"
+        slick_init_configs
+        command_slick_other_monitor "${COMMAND_ARGS}"
+        ;;
+    "remove")
+        check_command_dm "lightdm" "gdm" "webkit2" "qtquick"
+        check_root
+        eval "command_${MODE}_remove"
+        ;;
+    "remove-last")
+        check_command_dm "lxdm"
+        lxdm_init_configs
+        command_lxdm_remove_last
+        ;;
+    "root-login")
+        check_command_dm "gdm"
+        gdm_init_configs
+        command_gdm_root_login "${COMMAND_ARGS}"
         ;;
     "session")
         check_command_dm "lxdm"
@@ -2007,25 +1980,54 @@ case "${COMMAND}" in
         lxdm_init_configs
         command_lxdm_session_change "${COMMAND_ARGS}"
         ;;
-    "remove-last")
-        check_command_dm "lxdm"
-        lxdm_init_configs
-        command_lxdm_remove_last
+    "show-config")
+        check_command_dm "lightdm"
+        command_lightdm_show_config
         ;;
-    "edit-script")
-        check_command_dm "lxdm"
-        lxdm_init_configs
-        comamnd_lxdm_edit_script
+
+    "sound")
+        check_command_dm "gdm"
+        gdm_init_configs
+        command_gdm_sound "${COMMAND_ARGS}"
         ;;
-    "dm")
-        command_general_dm "${COMMAND_ARGS}"
+    "tap")
+        check_command_dm "gdm"
+        gdm_init_configs
+        command_gdm_tap "${COMMAND_ARGS}"
+        ;;
+    "theme")
+        check_command_dm "webkit2" "sddm"
+        case "${MODE}" in
+            "webkit2")
+                webkit2_init_configs
+                command_webkit2_theme_wizard
+                ;;
+            "sddm")
+                sddm_init_configs
+                command_sddm_theme_wizard
+                ;;
+        esac
+        ;;
+    "theme-change")
+        check_command_dm "webkit2" "sddm"
+        case "${MODE}" in
+            "webkit2")
+                webkit2_init_configs
+                command_webkit2_theme_change "${COMMAND_ARGS}"
+                ;;
+            "sddm")
+                sddm_init_configs
+                command_sddm_theme_change
+                ;;
+        esac
+        ;;
+    "tty")
+        check_command_dm "sddm"
+        sddm_init_configs
+        command_sddm_tty "${COMMAND_ARGS}"
         ;;
     "lightdm" | "gdm" | "sddm" | "lxdm" | "webkit2" | "qtquick" | "slick" | "gtkg")
         command_mode "${COMMAND}" "${COMMAND_ARGS}"
-        ;;
-    "debug")
-        check_comamnd_dm "webkit2"
-        command_webkit2_debug "${COMMAND_ARGS}"
         ;;
     *)
         msg_error "This command cannot be used in any mode"
