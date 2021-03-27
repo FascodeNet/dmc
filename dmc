@@ -2,11 +2,15 @@
 #
 # Yamada Hayao
 # Twitter: @Hayao0819
+# GitHub : @Hayao0819
 # Email  : hayao@fascode.net
 #
 # (c) 2019-2021 Fascode Network.
 #
-# dmc
+# dmc - display manager config tool
+#
+# Tool to change display manager settings
+# It supports various display managers.
 #
 # LICENSE: THE SUSHI-WARE LICENSE
 # https://github.com/MakeNowJust/sushi-ware
@@ -21,7 +25,7 @@ SCRIPT_PATH="$( cd -P "$( dirname "$(readlink -f "${0}")" )" && pwd )"
 script_usage(){
     echo "usage: dmc [options] [command]"
     echo
-    echo "A simple tool for switching LightDM Greeters"
+    echo "Tool to change display manager settings"
     echo
     echo " General command:"
     echo "    dm [display manager]              Set display manager"
