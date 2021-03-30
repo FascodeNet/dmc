@@ -30,6 +30,7 @@ script_usage(){
     echo " General command:"
     echo "    dm [display manager]              Set display manager"
     echo "    [mode] [command]                  You can specify the mode as a command"
+    echo "    help                              Show this help document"
     echo
     echo " LightDM command:"
     echo "    autologin [username] [session]    Set up automatic login (with blank username to disable)"
@@ -2032,6 +2033,10 @@ case "${COMMAND}" in
         ;;
     "lightdm" | "gdm" | "sddm" | "lxdm" | "webkit2" | "qtquick" | "slick" | "gtkg")
         command_mode "${COMMAND}" "${COMMAND_ARGS}"
+        ;;
+    "help")
+        script_usage
+        exit 0
         ;;
     *)
         msg_error "This command cannot be used in any mode"
