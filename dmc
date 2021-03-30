@@ -772,7 +772,7 @@ command_lightdm_auto_login(){
         if [[ -n "${autologin_user}" ]]; then
             # autologinを無効化
             for _autologin in "autologin-guest" "autologin-user" "autologin-user-timeout" "autologin-in-background" "autologin-session"; do
-                remove_key "${_autologin}"
+                lightdm_remove_key "${_autologin}"
             done
             echo "Canceled automatic login of ${autologin_user}"
         fi
