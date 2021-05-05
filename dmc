@@ -502,7 +502,9 @@ command_general_dm(){
     fi
 
     # 現在のディスプレイマネージャを無効化
-    systemctl disable "${CURRENT_DM}.service"
+    if [[ -n "${CURRENT_DM+SET}" ]]; then
+        systemctl disable "${CURRENT_DM}.service"
+    fi
 
     # 指定されたディスプレイマネージャを有効化
     if check_systemd_unit "${1}"; then
@@ -1644,7 +1646,11 @@ USE_EDITOR="${EDITOR:-vi}"
 BACKGROUND_DIR="/usr/share/backgrounds"
 
 # Global - 現在のディスプレイマネージャ名
-CURRENT_DM="$(basename "$(readlink "/etc/systemd/system/display-manager.service")" | sed "s|.service$||g")"
+if [[ -f "/etc/systemd/system/display-manager.service" ]]; then
+    CURRENT_DM="$(basename "$(readlink "/etc/systemd/system/display-manager.service")" | sed "s|.service$||g")"
+else
+    CURRENT_DM=""
+fi
 
 # モード
 MODE="${CURRENT_DM}"
