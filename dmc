@@ -523,29 +523,27 @@ command_mode(){
     fi
 
     local _mode="${1}" _command="${2}"
-    local _dmc_args="-e ${USE_EDITOR} -m ${_mode}"
+    local _dmc_args=("-e" "${USE_EDITOR}" "-m" "${_mode}")
     shift 2
 
     # 基本的な変数を設定
-    local _command_args="${*}"
-    : "${_command_args-""}" # サブコマンドの引数が何も指定されなかった場合に空文字を代入
-
+    local _command_args=("${@}")
 
     # オプション設定
     if [[ "${NON_INTERACTIVE}" = true ]]; then
-        _dmc_args+=" --non-interactive"
+        _dmc_args+=("--non-interactive")
     fi
     if [[ "${NOROOT}" = true ]]; then
-        _dmc_args+=" --noroot"
+        _dmc_args+=("--noroot")
     fi
     if [[ "${NO_CHECK_TARGET}" = true ]]; then
-        _dmc_args+=" --no-check-target"
+        _dmc_args+=("--no-check-target")
     fi
     if [[ "${WRITE_ALL_FILES}" = true ]]; then
-        _dmc_args+=" --write-all-files"
+        _dmc_args+=("--write-all-files")
     fi
 
-    bash -c "${SCRIPT_PATH}/$(basename "${0}") ${_dmc_args} ${_command} ${_command_args}"
+    bash "${SCRIPT_PATH}/$(basename "${0}")" "${_dmc_args[@]}" "${_command}" "${_command_args[@]}"
 }
 
 
