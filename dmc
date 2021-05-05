@@ -211,7 +211,7 @@ get_cursor_theme(){
         if [[ -d "${_dir}" ]]; then
             while read -r line; do
                 _cursor_theme_dir_list+=("${line}")
-            done < <(find "${_dir}" -type d -name "cursors" -print0 | xargs -0 -i dirname {} | sort)
+            done < <(find "${_dir}" -type d -name "cursors" -print0 | xargs -0 -I{} dirname {} | sort)
         fi
     done
     unset _dir _find_cursor_dir_list
@@ -235,7 +235,7 @@ get_gtk_theme(){
         if [[ -d "${_dir}" ]]; then
             while read -r line; do
                 _gtk_theme_dir_list+=("${line}")
-            done < <(find "${_dir}" -type d -name "gtk-*" -print0 | xargs -0 -i dirname {} | tr " " "\n" | sort | uniq)
+            done < <(find "${_dir}" -type d -name "gtk-*" -print0 | xargs -0 -I{} dirname {} | tr " " "\n" | sort | uniq)
         fi
     done
 
@@ -259,7 +259,7 @@ get_icon_theme(){
         if [[ -d "${_dir}" ]]; then
             while read -r line; do
                 _icon_theme_dir_list+=("${line}")
-            done < <(find "${_dir}" -type f -name "index.theme" -print0 | xargs -0 -i dirname {} | tr " " "\n" | sort | uniq)
+            done < <(find "${_dir}" -type f -name "index.theme" -print0 | xargs -0 -I{} dirname {} | tr " " "\n" | sort | uniq)
         fi
     done
 
@@ -363,9 +363,7 @@ ask_session(){
             exit 1
         fi
     else
-        while read -r line; do
-            _session_list+=("${line}")
-        done < <(get_xorg_session)
+        readarray -t _session_list < <(get_xorg_session)
         if ! session="$(ask_question -p "Select the desktop session to autologin" "${_session_list[@]}")"; then
             msg_error "Please enter the correct session name."
             exit 1
@@ -383,7 +381,7 @@ ask_session(){
 # GTKテーマを聞く
 ask_gtk_theme(){
     local gtk_themes _theme
-    while read -r line; do gtk_themes+=("${line}"); done < <(get_gtk_theme)
+    readarray -t gtk_themes < <(get_gtk_theme)
 
     # 質問する
     if ! _theme="$(ask_question -p "Please select the theme to use" "${gtk_themes[@]}")"; then
@@ -612,7 +610,7 @@ lightdm_get_value(){
 
 lightdm_greeter_list(){
     local greeter_list
-    readarray -t greeter_list < <( (find "${LIGHTDM_GREETERS_DIR}" -print0 -type f | xargs -0 -i basename {} | grep -E ".desktop$" | sed "s|.desktop$||g" | grep -xv "xgreeters") 2> /dev/null )
+    readarray -t greeter_list < <( (find "${LIGHTDM_GREETERS_DIR}" -print0 -type f | xargs -0 -I{} basename {} | grep -E ".desktop$" | sed "s|.desktop$||g" | grep -xv "xgreeters") 2> /dev/null )
     printf "%s\n" "${greeter_list[@]}" | sort | uniq
 }
 
@@ -830,7 +828,7 @@ gdm_dconf_set_config(){
 
 # gdm_dconf_get_value <dconf path> <key>
 gdm_dconf_get_value(){
-    find "/etc/dconf/db/gdm.d/" -type f -print0 | xargs -0i cat {} | crudini --get - "${1}" "${2}" | sed "s|^[\"\']||g" | sed "s|[\"\']$||g"
+    find "/etc/dconf/db/gdm.d/" -type f -print0 | xargs -0 -I{} cat {} | crudini --get - "${1}" "${2}" | sed "s|^[\"\']||g" | sed "s|[\"\']$||g"
 }
 
 # gdm_custom_get_value <section> <key>
