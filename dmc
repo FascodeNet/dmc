@@ -30,6 +30,7 @@ script_usage(){
     echo " General command:"
     echo "    dm [display manager]              Set display manager"
     echo "    [mode] [command]                  You can specify the mode as a command"
+    echo "    gtk-list                          Show a list of GTK theme"
     echo "    help                              Show this help document"
     echo
     echo " LightDM command:"
@@ -144,13 +145,9 @@ check_root(){
 
 # 数値チェック
 check_int(){
-    set +e
-    #if (( "$(expr "${1}" + 1 >/dev/null 2>&1; printf "${?}")" < 2 )); then
     if printf "%s" "${1}" | grep -E "^[0-9]+$" 1>/dev/null 2>&1; then
-        set -e
         return 0
     else
-        set -e
         return 1
     fi
 }
@@ -291,8 +288,7 @@ get_wayland_session(){
 # Returns only the selected result to standard output
 # ask_question -d <デフォルト値> -p <質問文> <選択肢1> <選択肢2> ...
 ask_question(){
-    local arg OPTARG OPTIND
-    local _default="" _choice_list _count _choice _question
+    local arg OPTARG OPTIND _default="" _choice_list _count _choice _question
     while getopts "d:p:" arg; do
         case "${arg}" in
             d) _default="${OPTARG}" ;;
@@ -300,7 +296,7 @@ ask_question(){
             *) exit 1 ;;
         esac
     done
-    shift $((OPTIND - 1))
+    shift "$((OPTIND - 1))"
     _choice_list=("${@}")
     _digit="${##}"
 
@@ -323,10 +319,8 @@ ask_question(){
     for (( _count=1; _count<=${#_choice_list[@]}; _count++)); do
         _choice="${_choice_list[$(( _count - 1 ))]}"
         if [[ ! "${_default}" = "" ]] && [[ "${_choice}" = "${_default}" ]]; then
-            #echo " * ${_count}: ${_choice}" >&2
             printf " * %${_digit}d: ${_choice}\n" "${_count}" >&2
         else
-            #echo "   ${_count}: ${_choice}" >&2
             printf "   %${_digit}d: ${_choice}\n" "${_count}" >&2
         fi
         unset _choice
@@ -2030,6 +2024,10 @@ case "${COMMAND}" in
         check_command_dm "sddm"
         sddm_init_configs
         command_sddm_tty "${COMMAND_ARGS[@]}"
+        ;;
+    "gtk-list")
+        get_gtk_theme
+        exit 0
         ;;
     "lightdm" | "gdm" | "sddm" | "lxdm" | "webkit2" | "qtquick" | "slick" | "gtkg")
         command_mode "${COMMAND}" "${COMMAND_ARGS[@]}"
