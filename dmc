@@ -612,9 +612,7 @@ lightdm_get_value(){
 
 lightdm_greeter_list(){
     local greeter_list
-    while read -r line; do
-        greeter_list+=("${line}")
-    done < <( (find "${LIGHTDM_GREETERS_DIR}" -print0 -type f | xargs -0 -i basename {} | grep -E ".desktop$" | sed "s|.desktop$||g" | grep -xv "xgreeters") 2> /dev/null )
+    readarray -t greeter_list < <( (find "${LIGHTDM_GREETERS_DIR}" -print0 -type f | xargs -0 -i basename {} | grep -E ".desktop$" | sed "s|.desktop$||g" | grep -xv "xgreeters") 2> /dev/null )
     printf "%s\n" "${greeter_list[@]}" | sort | uniq
 }
 
@@ -745,9 +743,7 @@ command_lightdm_edit(){
         exit 1
     fi
     local loaded_config_list
-    while read -r line; do
-        loaded_config_list+=("${line}")
-    done < <(printf "%s\n" "$(lightdm --show-config 2>&1 | grep -x -A "$(lightdm --show-config 2>&1 | wc -l)" "Sources:" | grep -v "Sources" | sed 's|^[A-Z]  ||g')"  | tr -d " ")
+    readarray -t loaded_config_list < <(printf "%s\n" "$(lightdm --show-config 2>&1 | grep -x -A "$(lightdm --show-config 2>&1 | wc -l)" "Sources:" | grep -v "Sources" | sed 's|^[A-Z]  ||g')"  | tr -d " ")
     for _config in "${loaded_config_list[@]}"; do
         echo -ne "Edit ${_config} ? (y or n)> "
         read -r -n 1 _yes_or_no
@@ -879,7 +875,7 @@ command_gdm_logo(){
 command_gdm_cursor_wizard(){
     # カーソル一覧を取得
     local cursor_themes _current_theme="$(gdm_dconf_get_value "org/gnome/desktop/interface" "cursor-theme")"
-    while read -r line; do cursor_themes+=("${line}"); done < <(get_cursor_theme)
+    readarray -t cursor_themes < <(get_cursor_theme)
 
     # 一覧を生成
     if ! _cursor_theme="$(ask_question -d "${_current_theme}" -p "Please select the cursor theme to use." "${cursor_themes[@]}")"; then
@@ -905,7 +901,7 @@ command_gdm_cursor_change(){
         exit 1
     fi
     local cursor_themes
-    while read -r line; do cursor_themes+=("${line}"); done < <(get_cursor_theme)
+    readarray -t cursor_themes < <(get_cursor_theme)
     if ! printf "%s\n" "${cursor_themes[@]}" | grep -x "${1}" 1>/dev/null 2>&1; then
         msg_error "The cursor theme (${1}) was not found"
         exit 1
@@ -1024,9 +1020,7 @@ webkit2_set_config(){
 #== webkit2用コマンド ==#
 command_webkit2_theme_wizard(){
     local _theme_list
-    while read -r line; do
-        _theme_list+=("${line}")
-    done < <(ls /usr/share/lightdm-webkit/themes)
+    readarray -t _theme_list < <(ls /usr/share/lightdm-webkit/themes)
 
     local _current_theme=$(webkit2_get_value greeter webkit_theme | sed "s|\"||g")
     local _theme
@@ -1191,7 +1185,7 @@ command_slick_gtk_change(){
 
 command_slick_icon_wizard(){
     local icons
-    while read -r line; do icons+=("${line}"); done < <(get_icon_theme)
+    readarray -t icons < <(get_icon_theme)
 
     local _icon
     echo "Please select the icon theme to use."
@@ -1288,7 +1282,7 @@ command_sddm_auto_login(){
 command_sddm_cursor_wizard(){
     # カーソル一覧を取得
     local cursor_themes _current_theme="$(sddm_get_value "Theme" "CursorTheme")"
-    while read -r line; do cursor_themes+=("${line}"); done < <(get_cursor_theme)
+    readarray -t cursor_themes < <(get_cursor_theme)
 
     # 一覧を生成
     if ! _cursor_theme="$(ask_question -d "${_current_theme}" -p "Please select the cursor theme to use." "${cursor_themes[@]}")"; then
@@ -1314,7 +1308,7 @@ command_sddm_cursor_change(){
         exit 1
     fi
     local cursor_themes
-    while read -r line; do cursor_themes+=("${line}"); done < <(get_cursor_theme)
+    readarray -t cursor_themes < <(get_cursor_theme)
     if ! printf "%s\n" "${cursor_themes[@]}" | grep -x "${1}" 1>/dev/null 2>&1; then
         msg_error "The cursor theme (${1}) was not found"
         exit 1
@@ -1347,9 +1341,7 @@ command_sddm_tty(){
 
 command_sddm_theme_wizard(){
     local _theme_list
-    while read -r line; do
-        _theme_list+=("${line}")
-    done < <(find "/usr/share/sddm/themes/" -maxdepth 1 -mindepth 1 -type d -print0 | xargs -0 -I{} basename {})
+    readarray -t _theme_list < <(find "/usr/share/sddm/themes/" -maxdepth 1 -mindepth 1 -type d -print0 | xargs -0 -I{} basename {})
 
     local _theme _current_theme=$(sddm_get_value "Theme" "Current")
     if ! _theme="$(ask_question -d "${_current_theme}" -p "Please select the theme to use." "${_theme_list[@]}")"; then
@@ -1569,7 +1561,7 @@ command_gtk_greeter_gtk_change(){
 
 command_gtk_greeter_icon_wizard(){
     local icons
-    while read -r line; do icons+=("${line}"); done < <(get_icon_theme)
+    readarray -t icons < <(get_icon_theme)
 
     local _icon
     echo "Please select the icon theme to use."
