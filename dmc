@@ -1667,11 +1667,11 @@ REMOVE_FILES=false
 ARGUMENT=("${@}")
 OPTS=("m:" "e:" "h" "G")
 OPTL=("mode:" "editor:" "help" "non-interactive" "noroot" "write-all-files" "no-check-target" "lightdm-greeter" "remove")
-if ! OPT=$(getopt -o "$(printf "%s," "${OPTS[@]}")" -l "$(printf "%s," "${OPTL[@]}")" -- "${ARGUMENT[@]}"); then
+if ! readarray -t OPT < <(getopt -o "$(printf "%s," "${OPTS[@]}")" -l "$(printf "%s," "${OPTL[@]}")" -- "${ARGUMENT[@]}"); then
     exit 1
 fi
 
-eval set -- "${OPT}"
+eval set -- "${OPT[@]}"
 unset OPT OPTS OPTL
 
 while true; do
