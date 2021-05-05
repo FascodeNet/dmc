@@ -1664,11 +1664,10 @@ NO_CHECK_TARGET=false
 REMOVE_FILES=false
 
 #== 引数解析 ==#
-ARGUMENT="${*}"
-OPTS="m:e:hG"
-OPTL="mode:,editor:,help,non-interactive,noroot,write-all-files,no-check-target,lightdm-greeter,remove"
-# shellcheck disable=SC2086
-if ! OPT="$(getopt -o ${OPTS} -l ${OPTL} -- ${ARGUMENT})"; then
+ARGUMENT=("${@}")
+OPTS=("m:" "e:" "h" "G")
+OPTL=("mode:" "editor:" "help" "non-interactive" "noroot" "write-all-files" "no-check-target" "lightdm-greeter" "remove")
+if ! OPT=$(getopt -o "$(printf "%s," "${OPTS[@]}")" -l "$(printf "%s," "${OPTL[@]}")" -- "${ARGUMENT[@]}"); then
     exit 1
 fi
 
