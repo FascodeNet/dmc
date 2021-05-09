@@ -276,13 +276,10 @@ get_icon_theme(){
     printf "%s\n" "${_gtk_theme_name_list[@]}" | sort | uniq
 }
 
-get_xorg_session(){
-    find "/usr/share/xsessions" -type f -print0 -name "*.desktop" | xargs -0 -I{} bash -c 'basename {} | sed "s|.desktop||g"'
+get_session(){
+    find "/usr/share/xsessions" "/usr/share/wayland-sessions" -type f -print0 -name "*.desktop" | xargs -0 -I{} bash -c 'basename {} | sed "s|.desktop||g"'
 }
 
-get_wayland_session(){
-    find "/usr/share/wayland-sessions" -type f  -print0 -name "*.desktop" | xargs -0 -I{} bash -c 'basename {} | sed "s|.desktop||g"'
-}
 
 # 質問を行う関数
 # Returns only the selected result to standard output
@@ -351,8 +348,8 @@ ask_question(){
 # デスクトップセッションを聞く
 ask_session(){
     local _session
-    if (( $(get_xorg_session | wc -l) <= 1 )); then
-        _session="$(get_xorg_session)"
+    if (( $(get_session | wc -l) <= 1 )); then
+        _session="$(get_session)"
     elif [[ "${NON_INTERACTIVE}" = true ]]; then
         # 非対話モード
         # ~/.dmrcの値を設定します
@@ -363,14 +360,8 @@ ask_session(){
             exit 1
         fi
     else
-        readarray -t _session_list < <(get_xorg_session)
-        if ! session="$(ask_question -p "Select the desktop session to autologin" "${_session_list[@]}")"; then
-            msg_error "Please enter the correct session name."
-            exit 1
-        fi
-        if [[ -f "/usr/share/xsessions/${session}.desktop" ]]; then
-            _session="${session}"
-        else
+        readarray -t _session_list < <(get_session)
+        if ! _session="$(ask_question -p "Select the desktop session to autologin" "${_session_list[@]}")"; then
             msg_error "Please enter the correct session name."
             exit 1
         fi
@@ -394,18 +385,32 @@ ask_gtk_theme(){
 # セッションが利用可能かどうか確認する
 # check_session <session>
 check_session(){
-    if [[ ! -f "/usr/share/xsessions/${1}.desktop" ]]; then
-        # 存在しないセッションが指定された場合
-        msg_error "This is a session (${1}) that does not exist."
-        exit 1
-    fi
+    for _file in "/usr/share/wayland-sessions/${1}.desktop" "/usr/share/xsessions/${1}.desktop"; do
+        if [[ -f "${_file}" ]]; then
+            return 0
+        fi
+    done
+    # 存在しないセッションが指定された場合
+    msg_error "This is a session (${1}) that does not exist."
+    return 1
+}
+
+# セッションのフルパスを返す
+get_session_path(){
+    check_session "${1}"
+    for _file in "/usr/share/wayland-sessions/${1}.desktop" "/usr/share/xsessions/${1}.desktop"; do
+        if [[ -f "${_file}" ]]; then
+            echo "${_file}"
+            return 0
+        fi
+    done
 }
 
 # セッションのバイナリを取得する
 # get_session <session name>
-get_session(){
+get_session_exec(){
     check_session "${1}"
-    local session_exec="$(crudini --get "/usr/share/xsessions/${1}.desktop" "Desktop Entry" "Exec")"
+    local session_exec="$(crudini --get "$(get_session_path "${1}")" "Desktop Entry" "Exec")"
     if [[ ! -f "${session_exec}" ]]; then
         session_exec="$(type -p "${session_exec}")"
     fi
@@ -1441,7 +1446,7 @@ command_lxdm_session_change(){
     fi
     local session="${1}"
     check_session "${session}"
-    local session_exec="$(get_session "${session}")"
+    local session_exec="$(get_session_exec "${session}")"
     lxdm_set_config "base" "session" "${session_exec}"
 }
 
