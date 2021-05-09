@@ -164,27 +164,17 @@ check_bool(){
     fi
 }
 
-# コマンドラッパー
-wrapper(){
-    local _command="${1}"
-    shift 1
-    if which "${_command}" >/dev/null 2>&1; then
-        $(which "${_command}") "${@}"
-    else
-        msg_error "${_command} was not found"
-        exit 1
-    fi
+# インストールされていないコマンドを確認
+check_tools(){
+    local _command
+    for _command in "${@}"; do
+        if ! which "${_command}" >/dev/null 2>&1; then
+            msg_error "${_command} was not found"
+            exit 1
+        fi
+    done
 }
 
-# crudini ラッパー
-crudini(){
-    wrapper crudini "${@}"
-}
-
-# jq ラッパー
-jq(){
-    wrapper jq "${@}"
-}
 
 # 指定されたコマンドが現在のモードで実行可能かどうかを判定する
 check_command_dm(){
@@ -1748,6 +1738,9 @@ fi
 if [[ "${NO_CHECK_TARGET}" = false ]]; then
     check_main_binary
 fi
+
+# 依存コマンドの確認
+ check_tools "jq" "crudini"
 
 # コマンドとモードに応じて関数を実行する
 case "${COMMAND}" in
