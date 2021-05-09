@@ -27,6 +27,10 @@ script_usage(){
     echo
     echo "Tool to change display manager settings"
     echo
+    echo " Example:"
+    echo "    dmc lightdm greeter-list"
+    echo "    dmc gdm root-login true"
+    echo
     echo " General command:"
     echo "    dm [display manager]              Set display manager"
     echo "    [mode] [command]                  You can specify the mode as a command"
