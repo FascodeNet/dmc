@@ -1393,6 +1393,31 @@ command_sddm_facedir(){
     sddm_set_config "Theme" "FacesDir" "${1}"
 }
 
+command_sddm_edit(){
+    local _filelist=(
+        "sddm.conf       : Main config file"
+        "wayland-session : Script to run after starting wayland session"
+        "Xsession        : Script to run after starting X11 session"
+        "Xsetup          : Script to run before starting X11"
+        "Xstop           : Script to run before stopping X11"
+    )
+    local _file
+    if ! _file="$(ask_question -p "Select the script you want to edit" "${_filelist[@]}" | cut -d ":" -f 1 | tr -d " ")"; then
+        command_sddm_edit
+        exit 0
+    fi
+
+    case "${_file}" in
+        "sddm.conf")
+            _file="${MODE_CONFIG["sddm"]}"
+            ;;
+        *)
+            _file="/usr/share/sddm/scripts/${_file}"
+            ;;
+    esac
+    bash -c "${USE_EDITOR} ${_file}"
+}
+
 #== LXDM用の汎用関数 ==#
 # sddm_get_value <section> <key> <valye>
 lxdm_get_value(){
@@ -1850,8 +1875,12 @@ case "${COMMAND}" in
         command_general_dm "${COMMAND_ARGS[@]}"
         ;;
     "edit")
-        check_command_dm "lightdm" "gdm"
+        check_command_dm "lightdm" "gdm" "sddm"
         case "${MODE}" in
+            "sddm")
+                check_root
+                command_sddm_edit
+                ;;
             "lightdm")
                 check_root
                 command_lightdm_edit
