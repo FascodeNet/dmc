@@ -2041,7 +2041,7 @@ case "${COMMAND}" in
                 ;;
             "sddm")
                 sddm_init_configs
-                command_sddm_theme_change
+                command_sddm_theme_change "${COMMAND_ARGS[@]}"
                 ;;
         esac
         ;;
