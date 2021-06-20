@@ -93,6 +93,7 @@ script_usage(){
     echo "    tty [int number]                  The lowest virtual terminal number that will be used"
     echo "    theme                             Run theme selection wizard"
     echo "    theme-change [theme]              Specify the theme"
+    echo "    facedir [dir]                     Specify the directory where the avatar icon exists"
     echo
     echo " LXDM command:"
     echo "    autologin [username] [session]    Set up automatic login (with blank username to disable)"
@@ -1379,6 +1380,19 @@ command_sddm_theme_change(){
     sddm_set_config "Theme" "Current" "${1}"
 }
 
+command_sddm_facedir(){
+    if [[ -z "${1+SET}" ]] || [[ "${1}" = "" ]]; then
+        msg_error "Please specify the dir"
+        exit 1
+    fi
+    if [[ ! -d "${1}" ]]; then
+        msg_error "The specified dir (${1}) does not exist"
+        exit 1
+    fi
+
+    sddm_set_config "Theme" "FacesDir" "${1}"
+}
+
 #== LXDM用の汎用関数 ==#
 # sddm_get_value <section> <key> <valye>
 lxdm_get_value(){
@@ -1848,6 +1862,11 @@ case "${COMMAND}" in
         check_command_dm "lxdm"
         lxdm_init_configs
         comamnd_lxdm_edit_script
+        ;;
+    "facedir")
+        check_command_dm "sddm"
+        sddm_init_configs
+        command_sddm_facedir "${COMMAND_ARGS[@]}"
         ;;
     "gtk")
         check_command_dm "slick" "lxdm" "gtkg"
