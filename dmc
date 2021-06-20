@@ -495,6 +495,7 @@ common_remove_command(){
 
 #== すべてのモード用コマンド ==#
 command_general_dm(){
+    check_root
     if [[ -z "${1}" ]] || [[ "${1}" = "" ]]; then
         [[ -n "${CURRENT_DM+SET}" ]] && [[ ! "${CURRENT_DM}" = "" ]] && echo "${CURRENT_DM}"
         exit 0
