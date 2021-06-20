@@ -496,8 +496,8 @@ common_remove_command(){
 #== すべてのモード用コマンド ==#
 command_general_dm(){
     if [[ -z "${1}" ]] || [[ "${1}" = "" ]]; then
-        msg_error "Please specify display manager"
-        exit 1
+        [[ -n "${CURRENT_DM+SET}" ]] && [[ ! "${CURRENT_DM}" = "" ]] && echo "${CURRENT_DM}"
+        exit 0
     fi
 
     # 現在のディスプレイマネージャを無効化
