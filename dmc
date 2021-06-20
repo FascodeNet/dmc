@@ -496,6 +496,8 @@ common_remove_command(){
 #== すべてのモード用コマンド ==#
 command_general_dm(){
     check_root
+
+    local _plymouth=false
     if [[ -z "${1}" ]] || [[ "${1}" = "" ]]; then
         [[ -n "${CURRENT_DM+SET}" ]] && [[ ! "${CURRENT_DM}" = "" ]] && echo "${CURRENT_DM}"
         exit 0
@@ -506,8 +508,16 @@ command_general_dm(){
         systemctl disable "${CURRENT_DM}.service"
     fi
 
+    # Plymouthの有効化を確認
+    if tr " " "\n" < "/proc/cmdline" | grep -x "splash"; then
+        _plymouth=true
+    fi
+
     # 指定されたディスプレイマネージャを有効化
-    if check_systemd_unit "${1}"; then
+    if check_systemd_unit "${1}-plymouth" && [[ -n "${CURRENT_DM%-plymouth}" ]] && [[ "${_plymouth}" = true ]]; then
+        echo "Plymouth services will be enabled"
+        systemctl enable "${1}-plymouth.service"
+    elif check_systemd_unit "${1}"; then
         systemctl enable "${1}.service"
     else
         msg_error "Wrong display manager name"
