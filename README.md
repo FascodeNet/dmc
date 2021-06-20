@@ -10,7 +10,9 @@ Tested only on Arch Linux
 - vi (default editor)
 - bash
 - util-linux
-- crudini
+- [jq](https://github.com/stedolan/jq)
+- [crudini](https://github.com/pixelb/crudini)
+- [crshini](https://github.com/Hayao0819/crshini)
 
 ## Supported Display manager and Greeter
 - LightDM
