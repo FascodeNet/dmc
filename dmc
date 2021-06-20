@@ -501,7 +501,7 @@ command_general_dm(){
     fi
 
     # 現在のディスプレイマネージャを無効化
-    if [[ -n "${CURRENT_DM+SET}" ]]; then
+    if [[ -n "${CURRENT_DM+SET}" ]] && [[ ! "${CURRENT_DM}" = "" ]]; then
         systemctl disable "${CURRENT_DM}.service"
     fi
 
