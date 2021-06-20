@@ -236,7 +236,7 @@ get_gtk_theme(){
 
     local _theme_name
     for _dir in "${_gtk_theme_dir_list[@]}"; do
-        _theme_name="$(crudini --get "${_dir}/index.theme" 'Desktop Entry' "Name" 2> /dev/null ;:)"
+        _theme_name="$(_crshini_get  "${_dir}/index.theme" 'Desktop Entry' "Name" 2> /dev/null ;:)"
         if [[ -z "${_theme_name}" ]]; then
             continue
         else
@@ -1765,7 +1765,11 @@ if [[ "${NO_CHECK_TARGET}" = false ]]; then
 fi
 
 # 依存コマンドの確認
- check_tools "jq" "crudini"
+ check_tools "jq" "crudini" "crshini"
+
+ # libcrshiniのロード
+ # shellcheck disable=SC1091
+ source "/usr/lib/libcrshini"
 
 # コマンドとモードに応じて関数を実行する
 case "${COMMAND}" in
