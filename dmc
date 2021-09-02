@@ -94,6 +94,9 @@ script_usage(){
     echo "    theme                             Run theme selection wizard"
     echo "    theme-change [theme]              Specify the theme"
     echo "    facedir [dir]                     Specify the directory where the avatar icon exists"
+    echo "    hidpi [true or false]             Toggle Qt's HiDPI"
+    echo "    maxuid [int]                      Specify the maximum user id for displayed users"
+    echo "    minuid [int]                      Specify the minimum user id for displayed users"
     echo
     echo " LXDM command:"
     echo "    autologin [username] [session]    Set up automatic login (with blank username to disable)"
@@ -150,11 +153,7 @@ check_root(){
 
 # 数値チェック
 check_int(){
-    if printf "%s" "${1}" | grep -E "^[0-9]+$" 1>/dev/null 2>&1; then
-        return 0
-    else
-        return 1
-    fi
+    printf "%s" "${1}" | grep -E "^[0-9]+$" 1>/dev/null 2>&1 || return 1
 }
 
 check_bool(){
@@ -1418,6 +1417,28 @@ command_sddm_edit(){
     bash -c "${USE_EDITOR} ${_file}"
 }
 
+command_sddm_hidpi(){
+    local _arg="$(echo "${1-""}" | tr "[:upper:]" "[:lower:]")"
+    if ! check_bool "${_arg}"; then
+        msg_error "Please specify true or false"
+        exit 1
+    fi
+    sddm_set_config "Wayland" "EnableHiDPI" "${_arg}"
+    sddm_set_config "X11" "EnableHiDPI" "${_arg}"
+}
+
+command_sddm_maxuid(){
+    local _arg="${1-""}"
+    { check_int "${_arg}" || [[ -z "${_arg}" ]] ;} && msg_error "Please specify User id" && exit 1
+    sddm_set_config "Users" "MaximumUid" "${_arg}"
+}
+
+command_sddm_minuid(){
+    local _arg="${1-""}"
+    { check_int "${_arg}" || [[ -z "${_arg}" ]] ;} && msg_error "Please specify User id" && exit 1
+    sddm_set_config "Users" "MinimumUid" "${_arg}"
+}
+
 #== LXDM用の汎用関数 ==#
 # sddm_get_value <section> <key> <valye>
 lxdm_get_value(){
@@ -1963,6 +1984,11 @@ case "${COMMAND}" in
                 ;;
         esac
         ;;
+    "hidpi")
+        check_command_dm "sddm"
+        sddm_init_configs
+        command_sddm_hidpi "${COMMAND_ARGS[@]}"
+        ;;
     "icon")
         check_command_dm "slick" "gtkg"
         case "${MODE}" in
@@ -2001,6 +2027,16 @@ case "${COMMAND}" in
                 command_slick_logo "${COMMAND_ARGS[@]}"
                 ;;
         esac
+        ;;
+    "maxuid")
+        check_command_dm "sddm"
+        sddm_init_configs
+        command_sddm_maxuid "${COMMAND_ARGS[@]}"
+        ;;
+    "minuid")
+        check_command_dm "sddm"
+        sddm_init_configs
+        command_sddm_minuid "${COMMAND_ARGS[@]}"
         ;;
     "numlock")
         check_command_dm "sddm"
@@ -2095,7 +2131,12 @@ case "${COMMAND}" in
         exit 0
         ;;
     *)
-        msg_error "This command cannot be used in any mode"
-        exit 1
+        if test "$(type -t "command_${MODE}_${COMMAND}")" = "function"; then
+            msg_warn "This command is available but not officially implemented."
+            "command_${MODE}_${COMMAND}" "${COMMAND_ARGS[@]}"
+        else
+            msg_error "This command cannot be used in any mode"
+            exit 1
+        fi
         ;;
 esac
