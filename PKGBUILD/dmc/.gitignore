@@ -1,0 +1,4 @@
+dmc/
+pkg/
+src/
+*.pkg.tar.*

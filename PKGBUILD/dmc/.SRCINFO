@@ -1,0 +1,17 @@
+pkgbase = dmc
+	pkgdesc = An all-in-one tool for configuring major display managers
+	pkgver = 0.1
+	pkgrel = 1
+	url = https://github.com/FascodeNet/dmc
+	arch = any
+	license = SUSHI-WARE
+	makedepends = git
+	depends = bash
+	depends = vi
+	depends = util-linux
+	depends = crudini
+	conflicts = dmc-git
+	source = git+https://github.com/FascodeNet/dmc.git#tag=v0.1
+	md5sums = SKIP
+
+pkgname = dmc

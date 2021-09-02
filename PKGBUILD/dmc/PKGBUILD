@@ -1,0 +1,20 @@
+# Maintaoner: Yamada Hayao <development@fascode.net>
+
+reponame="dmc"
+pkgname="${reponame}"
+pkgver=0.1
+pkgrel=1
+pkgdesc="An all-in-one tool for configuring major display managers"
+arch=('any')
+url="https://github.com/FascodeNet/dmc"
+license=('SUSHI-WARE')
+depends=('bash' "vi" "util-linux" "crudini")
+makedepends=('git')
+source=("git+https://github.com/FascodeNet/dmc.git#tag=v${pkgver}")
+md5sums=('SKIP')
+conflicts=("dmc-git")
+
+package() {
+    install -m 755 -D "${srcdir}/dmc/dmc" "${pkgdir}/usr/bin/dmc"
+    install -m 755 -D "${srcdir}/dmc/LICENSE.md" "${pkgdir}/usr/share/licenses/dmc/LICENSE.md"
+}
