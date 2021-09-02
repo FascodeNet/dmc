@@ -157,11 +157,7 @@ check_int(){
 }
 
 check_bool(){
-    if [[ -n "${1}" ]] && { [[ "${1}" = "true" ]] ||[[ "${1}" = "false" ]]; }; then
-        return 0
-    else
-        return 1
-    fi
+    [[ -n "${1}" ]] && { [[ "${1}" = "true" ]] ||[[ "${1}" = "false" ]]; } || return 1
 }
 
 # インストールされていないコマンドを確認
@@ -180,6 +176,14 @@ check_tools(){
 check_command_dm(){
     if ! printf "%s\n" "${@}" | grep -xE "${MODE}" >/dev/null 2>&1; then
         msg_error "This command (${COMMAND}) is not available in the current mode (${MODE})."
+        exit 1
+    fi
+}
+
+# NON_INTERACTIVEの場合に終了
+check_noninteractive(){
+    if [[ "${NON_INTERACTIVE}" = true ]]; then
+        msg_error "You cannot use this command in non-interactive mode."
         exit 1
     fi
 }
@@ -540,18 +544,10 @@ command_mode(){
     local _command_args=("${@}")
 
     # オプション設定
-    if [[ "${NON_INTERACTIVE}" = true ]]; then
-        _dmc_args+=("--non-interactive")
-    fi
-    if [[ "${NOROOT}" = true ]]; then
-        _dmc_args+=("--noroot")
-    fi
-    if [[ "${NO_CHECK_TARGET}" = true ]]; then
-        _dmc_args+=("--no-check-target")
-    fi
-    if [[ "${WRITE_ALL_FILES}" = true ]]; then
-        _dmc_args+=("--write-all-files")
-    fi
+    [[ "${NON_INTERACTIVE}" = true ]] && _dmc_args+=("--non-interactive")
+    [[ "${NOROOT}" = true ]] && _dmc_args+=("--noroot")
+    [[ "${NO_CHECK_TARGET}" = true ]] && _dmc_args+=("--no-check-target")
+    [[ "${WRITE_ALL_FILES}" = true ]] && _dmc_args+=("--write-all-files")
 
     bash "${SCRIPT_PATH}/$(basename "${0}")" "${_dmc_args[@]}" "${_command}" "${_command_args[@]}"
 }
@@ -722,10 +718,8 @@ command_lightdm_remove(){
 
 # greeter-edit
 command_lightdm_greeter_edit(){
-    if [[ "${NON_INTERACTIVE}" = true ]]; then
-        msg_error "You cannot use this command in non-interactive mode."
-        exit 1
-    fi
+    check_noninteractive
+
     local _greeter="${1:-${LIGHTDM_CURRENT_GREETER}}"
     if [[ -z "${MODE_CONFIG[${GREETER_MODE["${_greeter}"]}]+SET}" ]]; then
         msg_error "This Greeter is not currently supported."
@@ -746,10 +740,7 @@ command_lightdm_greeter_edit(){
 
 # edit
 command_lightdm_edit(){
-    if [[ "${NON_INTERACTIVE}" = true ]]; then
-        msg_error "You cannot use this command in non-interactive mode."
-        exit 1
-    fi
+    check_noninteractive
     local loaded_config_list
     readarray -t loaded_config_list < <(printf "%s\n" "$(lightdm --show-config 2>&1 | grep -x -A "$(lightdm --show-config 2>&1 | wc -l)" "Sources:" | grep -v "Sources" | sed 's|^[A-Z]  ||g')"  | tr -d " ")
     for _config in "${loaded_config_list[@]}"; do
@@ -936,10 +927,7 @@ command_gdm_tap(){
 }
 
 command_gdm_edit(){
-    if [[ "${NON_INTERACTIVE}" = true ]]; then
-        msg_error "You cannot use this command in non-interactive mode."
-        exit 1
-    fi
+    check_noninteractive
     bash -c "${USE_EDITOR} ${MODE_CONFIG["gdm-custom"]}"
 }
 
@@ -958,9 +946,7 @@ command_gdm_auto_login(){
         fi
     else
         local autologin_user="${1}" autologin_session
-        if [[ -v 2 ]]; then
-            autologin_session="${2}"
-        fi
+        [[ -v 2 ]] && autologin_session="${2}"
 
         # セッションを設定 (WayLandのセッションは現在サポートされていません)
         if [[ -z "${autologin_session+SET}" ]]; then
@@ -1230,19 +1216,13 @@ command_slick_remove(){
 
 #== SDDM用の汎用関数 ==#
 # sddm_get_value <section> <key> <valye>
-sddm_get_value(){
-    crudini --set "${MODE_CONFIG["sddm"]}" "${1}" "${2}"
-}
+sddm_get_value(){ crudini --set "${MODE_CONFIG["sddm"]}" "${1}" "${2}"; }
 
 # sddm_set_config <section> <key> <value>
-sddm_set_config(){
-    crudini --set "${MODE_CONFIG["sddm"]}" "${1}" "${2}" "${3}"
-}
+sddm_set_config(){ crudini --set "${MODE_CONFIG["sddm"]}" "${1}" "${2}" "${3}"; }
 
 # sddm_remove_key <section> <key>
-sddm_remove_key(){
-    crudini --del "${MODE_CONFIG["sddm"]}" "${1}" "${2}"
-}
+sddm_remove_key(){ crudini --del "${MODE_CONFIG["sddm"]}" "${1}" "${2}"; }
 
 
 sddm_init_configs(){
@@ -1264,9 +1244,7 @@ command_sddm_auto_login(){
         fi
     else
         local autologin_user="${1}" autologin_session
-        if [[ -v 2 ]]; then
-            autologin_session="${2}"
-        fi
+        [[ -v 2 ]] && autologin_session="${2}"
 
         # セッションを設定 (WayLandのセッションは現在サポートされていません)
         if [[ -z "${autologin_session+SET}" ]]; then
@@ -1441,19 +1419,13 @@ command_sddm_minuid(){
 
 #== LXDM用の汎用関数 ==#
 # sddm_get_value <section> <key> <valye>
-lxdm_get_value(){
-    crudini --set "${MODE_CONFIG["lxdm"]}" "${1}" "${2}"
-}
+lxdm_get_value(){ crudini --set "${MODE_CONFIG["lxdm"]}" "${1}" "${2}"; }
 
 # sddm_set_config <section> <key> <value>
-lxdm_set_config(){
-    crudini --set "${MODE_CONFIG["lxdm"]}" "${1}" "${2}" "${3}"
-}
+lxdm_set_config(){ crudini --set "${MODE_CONFIG["lxdm"]}" "${1}" "${2}" "${3}"; }
 
 # sddm_remove_key <section> <key>
-lxdm_remove_key(){
-    crudini --del "${MODE_CONFIG["lxdm"]}" "${1}" "${2}"
-}
+lxdm_remove_key(){ crudini --del "${MODE_CONFIG["lxdm"]}" "${1}" "${2}"; }
 
 
 lxdm_init_configs(){
@@ -1475,9 +1447,7 @@ command_lxdm_auto_login(){
         fi
     else
         local autologin_user="${1}" autologin_session
-        if [[ -v 2 ]]; then
-            autologin_session="${2}"
-        fi
+        [[ -v 2 ]] && autologin_session="${2}"
 
         # セッションを設定 (WayLandのセッションは現在サポートされていません)
         if [[ -z "${autologin_session+SET}" ]]; then
@@ -1580,19 +1550,13 @@ command_lxdm_gtk_change(){
 
 #== GTk Greeter用の汎用関数 ==#
 # gtk_greeter_get_value <section> <key>
-gtk_greeter_get_value(){
-    crudini --set "${MODE_CONFIG["gtkg"]}" "${1}" "${2}"
-}
+gtk_greeter_get_value(){ crudini --set "${MODE_CONFIG["gtkg"]}" "${1}" "${2}"; }
 
 # gtk_greeter_set_config <section> <key> <value>
-gtk_greeter_set_config(){
-    crudini --set "${MODE_CONFIG["gtkg"]}" "${1}" "${2}" "${3}"
-}
+gtk_greeter_set_config(){ crudini --set "${MODE_CONFIG["gtkg"]}" "${1}" "${2}" "${3}"; }
 
 # gtk_greeter_remove_key <section> <key>
-gtk_greeter_remove_key(){
-    crudini --del "${MODE_CONFIG["gtkg"]}" "${1}" "${2}"
-}
+gtk_greeter_remove_key(){ crudini --del "${MODE_CONFIG["gtkg"]}" "${1}" "${2}"; }
 
 gtk_greeter_init_configs(){
     check_root
@@ -1732,12 +1696,10 @@ NO_CHECK_TARGET=false
 REMOVE_FILES=false
 
 #== 引数解析 ==#
-ARGUMENT=("${@}")
-OPTS=("m:" "e:" "h" "G")
-OPTL=("mode:" "editor:" "help" "non-interactive" "noroot" "write-all-files" "no-check-target" "lightdm-greeter" "remove")
-if ! readarray -t OPT < <(getopt -o "$(printf "%s," "${OPTS[@]}")" -l "$(printf "%s," "${OPTL[@]}")" -- "${ARGUMENT[@]}"); then
-    exit 1
-fi
+ARGUMENT=("${@}") OPTS=("m:" "e:" "h" "G") OPTL=("mode:" "editor:" "help" "non-interactive" "noroot" "write-all-files" "no-check-target" "lightdm-greeter" "remove")
+GETOPT=(-o "$(printf "%s," "${OPTS[@]}")" -l "$(printf "%s," "${OPTL[@]}")" -- "${ARGUMENT[@]}")
+getopt -Q "${GETOPT[@]}" || exit 1 # 引数エラー判定
+readarray -t OPT < <(getopt "${GETOPT[@]}") # 配列に代入
 
 eval set -- "${OPT[@]}"
 unset OPT OPTS OPTL
