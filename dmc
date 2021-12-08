@@ -35,6 +35,7 @@ script_usage(){
     echo "    dm [display manager]              Set display manager"
     echo "    [mode] [command]                  You can specify the mode as a command"
     echo "    gtk-list                          Show a list of GTK theme"
+    echo "    restart                           Restart current display manager"
     echo "    help                              Show this help document"
     echo
     echo " LightDM command:"
@@ -526,6 +527,15 @@ command_general_dm(){
     else
         msg_error "Wrong display manager name"
     fi
+}
+
+command_general_restart(){
+    { [[ -z "${CURRENT_DM+SET}" ]] && [[ ! "${CURRENT_DM}" = "" ]]; } && {
+        msg_error "Failed get current display manager"
+        exit 1
+    }
+
+    systemctl restart display-manager.service
 }
 
 # モードをコマンドとして扱い自身を再実行する
@@ -1701,7 +1711,7 @@ GETOPT=(-o "$(printf "%s," "${OPTS[@]}")" -l "$(printf "%s," "${OPTL[@]}")" -- "
 getopt -Q "${GETOPT[@]}" || exit 1 # 引数エラー判定
 readarray -t OPT < <(getopt "${GETOPT[@]}") # 配列に代入
 
-eval set -- "${OPT[@]}"
+eval set -- "${OPT[*]}"
 unset OPT OPTS OPTL
 
 while true; do
@@ -2019,6 +2029,10 @@ case "${COMMAND}" in
         check_command_dm "lxdm"
         lxdm_init_configs
         command_lxdm_remove_last
+        ;;
+    "restart")
+        check_root
+        command_general_restart
         ;;
     "root-login")
         check_command_dm "gdm"
